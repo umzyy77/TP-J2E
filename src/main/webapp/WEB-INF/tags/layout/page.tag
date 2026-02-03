@@ -1,5 +1,6 @@
 <%@ tag pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags/ui" %>
 <%@ attribute name="title" required="false" %>
 
 <!DOCTYPE html>
@@ -35,5 +36,7 @@
     </main>
     <jsp:include page="/WEB-INF/jsp/layout/footer.jsp"/>
 </div>
+
+<ui:dialog />
 </body>
 </html>

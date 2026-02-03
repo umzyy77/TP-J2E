@@ -85,6 +85,16 @@
                             <cargo.servlet.port>8080</cargo.servlet.port>
                         </properties>
                     </configuration>
+                    <deployables>
+                        <deployable>
+                            <groupId>org.example</groupId>
+                            <artifactId>MasterAnnonce</artifactId>
+                            <type>war</type>
+                            <properties>
+                                <context>/</context>
+                            </properties>
+                        </deployable>
+                    </deployables>
                 </configuration>
             </plugin>
             <plugin>

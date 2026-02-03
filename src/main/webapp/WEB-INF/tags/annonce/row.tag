@@ -5,10 +5,10 @@
 
 <tr class="transition-colors hover:bg-zinc-50">
     <td class="whitespace-nowrap px-4 py-3 font-medium text-zinc-900"><c:out value="${annonce.title}"/></td>
-    <td class="max-w-xs truncate px-4 py-3 text-zinc-600"><c:out value="${annonce.description}"/></td>
-    <td class="hidden whitespace-nowrap px-4 py-3 text-zinc-600 md:table-cell"><c:out value="${annonce.adress}"/></td>
-    <td class="hidden whitespace-nowrap px-4 py-3 text-zinc-600 lg:table-cell"><c:out value="${annonce.mail}"/></td>
-    <td class="hidden whitespace-nowrap px-4 py-3 text-zinc-500 lg:table-cell">
+    <td class="max-w-[200px] truncate px-4 py-3 text-zinc-600"><c:out value="${annonce.description}"/></td>
+    <td class="whitespace-nowrap px-4 py-3 text-zinc-600"><c:out value="${annonce.adress}"/></td>
+    <td class="whitespace-nowrap px-4 py-3 text-zinc-600"><c:out value="${annonce.mail}"/></td>
+    <td class="whitespace-nowrap px-4 py-3 text-zinc-500">
         <fmt:formatDate value="${annonce.dateAsDate}" pattern="dd/MM/yyyy HH:mm"/>
     </td>
     <td class="whitespace-nowrap px-4 py-3 text-right">
