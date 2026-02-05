@@ -45,6 +45,10 @@ Si vous changez les valeurs dans `.env`, mettez a jour aussi `application.proper
 ```
 mvn clean package
 ```
+## Run avec maven cargo (tomcat depuis le pom.xml)
+```
+mvn cargo:run
+```
 
 ## Run avec Tomcat embarque (Maven)
 ```
