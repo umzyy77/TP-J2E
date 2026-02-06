@@ -1,17 +1,16 @@
 package org.example.tpj2eannonces.servlet;
 
-import org.example.tpj2eannonces.dao.AnnonceDAO;
-import org.example.tpj2eannonces.exception.DatabaseException;
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
+import org.example.tpj2eannonces.service.AnnonceService;
+import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.utils.ValidationUtils;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @WebServlet(name = "annonceAddServlet", urlPatterns = "/AnnonceAdd")
 public class AnnonceAddServlet extends BaseServlet {
@@ -19,7 +18,7 @@ public class AnnonceAddServlet extends BaseServlet {
     private static final String VIEW_ADD = "/WEB-INF/jsp/annonce/add.jsp";
     private static final String ATTR_ANNONCE = "annonce";
 
-    private final transient AnnonceDAO annonceDAO = new AnnonceDAO();
+    private final transient AnnonceService annonceService = new AnnonceService();
 
     @Override
     protected Logger getLogger() {
@@ -49,10 +48,9 @@ public class AnnonceAddServlet extends BaseServlet {
             annonce.setDescription(ValidationUtils.validateDescription(annonce.getDescription()));
             annonce.setAdress(ValidationUtils.validateAdress(annonce.getAdress()));
             annonce.setMail(ValidationUtils.validateEmail(annonce.getMail()));
-            annonce.setDate(LocalDateTime.now());
 
-            Annonce created = annonceDAO.create(annonce);
-            if (created == null) {
+            Annonce created = annonceService.create(annonce);
+            if (created == null || created.getId() == null) {
                 request.setAttribute(ATTR_MESSAGE, "Erreur lors de l'enregistrement.");
                 request.setAttribute(ATTR_ANNONCE, annonce);
                 forwardTo(request, response, VIEW_ADD);
@@ -64,7 +62,7 @@ public class AnnonceAddServlet extends BaseServlet {
             request.setAttribute(ATTR_MESSAGE, e.getMessage());
             request.setAttribute(ATTR_ANNONCE, annonce);
             forwardTo(request, response, VIEW_ADD);
-        } catch (DatabaseException e) {
+        } catch (ServiceException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);

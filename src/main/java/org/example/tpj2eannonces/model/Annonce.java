@@ -6,24 +6,93 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+@Entity
+@Table(name = "annonce")
 public class Annonce {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @NotBlank(message = "Le titre est obligatoire")
+    @Size(max = 64, message = "Le titre ne doit pas dépasser 64 caractères")
+    @Column(nullable = false, length = 64)
     private String title;
+
+    @NotBlank(message = "La description est obligatoire")
+    @Size(max = 256, message = "La description ne doit pas dépasser 256 caractères")
+    @Column(nullable = false, length = 256)
     private String description;
+
+    @NotBlank(message = "L'adresse est obligatoire")
+    @Size(max = 64, message = "L'adresse ne doit pas dépasser 64 caractères")
+    @Column(nullable = false, length = 64)
     private String adress;
+
+    @NotBlank(message = "L'email est obligatoire")
+    @Email(message = "L'email doit être valide")
+    @Size(max = 64, message = "L'email ne doit pas dépasser 64 caractères")
+    @Column(nullable = false, length = 64)
     private String mail;
+
+    @Column(name = "date", nullable = false)
     private LocalDateTime date;
+
+    @NotNull(message = "Le statut est obligatoire")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AnnonceStatus status = AnnonceStatus.DRAFT;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private User author;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     public Annonce() {
     }
 
-    public Annonce(UUID id, String title, String description, String adress, String mail, LocalDateTime date) {
-        this.id = id;
+    public Annonce(String title, String description, String adress, String mail) {
         this.title = title;
         this.description = description;
         this.adress = adress;
         this.mail = mail;
-        this.date = date;
+        this.status = AnnonceStatus.DRAFT;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.date == null) {
+            this.date = LocalDateTime.now();
+        }
+        if (this.status == null) {
+            this.status = AnnonceStatus.DRAFT;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.date = LocalDateTime.now();
     }
 
     public UUID getId() {
@@ -81,26 +150,63 @@ public class Annonce {
         return Date.from(date.atZone(ZoneId.systemDefault()).toInstant());
     }
 
+    public AnnonceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AnnonceStatus status) {
+        this.status = status;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(User author) {
+        this.author = author;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    // Méthodes métier
+
+    public void publish() {
+        this.status = AnnonceStatus.PUBLISHED;
+    }
+
+    public void archive() {
+        this.status = AnnonceStatus.ARCHIVED;
+    }
+
+    public boolean isDraft() {
+        return this.status == AnnonceStatus.DRAFT;
+    }
+
+    public boolean isPublished() {
+        return this.status == AnnonceStatus.PUBLISHED;
+    }
+
+    public boolean isArchived() {
+        return this.status == AnnonceStatus.ARCHIVED;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         Annonce annonce = (Annonce) o;
-        return Objects.equals(id, annonce.id)
-                && Objects.equals(title, annonce.title)
-                && Objects.equals(description, annonce.description)
-                && Objects.equals(adress, annonce.adress)
-                && Objects.equals(mail, annonce.mail)
-                && Objects.equals(date, annonce.date);
+        return Objects.equals(id, annonce.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, adress, mail, date);
+        return Objects.hash(id);
     }
 
     @Override
@@ -112,6 +218,7 @@ public class Annonce {
                 ", adress='" + adress + '\'' +
                 ", mail='" + mail + '\'' +
                 ", date=" + date +
+                ", status=" + status +
                 '}';
     }
 }

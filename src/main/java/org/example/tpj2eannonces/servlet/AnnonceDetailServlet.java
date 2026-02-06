@@ -1,8 +1,10 @@
 package org.example.tpj2eannonces.servlet;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
+import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.utils.ValidationUtils;
@@ -13,9 +15,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet(name = "annonceDeleteServlet", urlPatterns = "/AnnonceDelete")
-public class AnnonceDeleteServlet extends BaseServlet {
-    private static final Logger logger = LoggerFactory.getLogger(AnnonceDeleteServlet.class);
+@WebServlet(name = "annonceDetailServlet", urlPatterns = "/AnnonceDetail")
+public class AnnonceDetailServlet extends BaseServlet {
+    private static final Logger logger = LoggerFactory.getLogger(AnnonceDetailServlet.class);
+    private static final String VIEW_DETAIL = "/WEB-INF/jsp/annonce/detail.jsp";
 
     private final transient AnnonceService annonceService = new AnnonceService();
 
@@ -28,12 +31,15 @@ public class AnnonceDeleteServlet extends BaseServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
             UUID id = ValidationUtils.validateId(request.getParameter("id"));
-            boolean deleted = annonceService.delete(id);
-            if (!deleted) {
+            Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
+
+            if (annonceOpt.isEmpty()) {
                 forwardTo(request, response, VIEW_404);
                 return;
             }
-            redirectTo(response, request.getContextPath() + "/AnnonceList?success=delete");
+
+            request.setAttribute("annonce", annonceOpt.get());
+            forwardTo(request, response, VIEW_DETAIL);
         } catch (ValidationException e) {
             handleNotFoundError(request, response, e.getMessage());
         } catch (ServiceException e) {
