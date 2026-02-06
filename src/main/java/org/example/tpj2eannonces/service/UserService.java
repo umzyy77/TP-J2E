@@ -13,8 +13,7 @@ import jakarta.persistence.EntityManager;
 public class UserService {
 
     public User create(User user) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
 
             Long usernameCount = em.createQuery("SELECT COUNT(u) FROM User u WHERE u.username = :username", Long.class)
@@ -37,40 +36,25 @@ public class UserService {
             em.getTransaction().commit();
             return user;
         } catch (ServiceException e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw e;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la création de l'utilisateur", e);
-        } finally {
-            em.close();
         }
     }
 
     public User update(User user) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             User merged = em.merge(user);
             em.getTransaction().commit();
             return merged;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la mise à jour de l'utilisateur", e);
-        } finally {
-            em.close();
         }
     }
 
     public boolean delete(UUID userId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             User user = em.find(User.class, userId);
             if (user != null) {
@@ -81,39 +65,27 @@ public class UserService {
             em.getTransaction().rollback();
             return false;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la suppression de l'utilisateur", e);
-        } finally {
-            em.close();
         }
     }
 
     public Optional<User> findById(UUID id) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             return Optional.ofNullable(em.find(User.class, id));
-        } finally {
-            em.close();
         }
     }
 
     public Optional<User> findByUsername(String username) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
                     .setParameter("username", username)
                     .getResultStream()
                     .findFirst();
-        } finally {
-            em.close();
         }
     }
 
     public Optional<User> authenticate(String username, String password) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             Optional<User> userOpt = em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
                     .setParameter("username", username)
                     .getResultStream()
@@ -123,18 +95,13 @@ public class UserService {
                 return userOpt;
             }
             return Optional.empty();
-        } finally {
-            em.close();
         }
     }
 
     public List<User> findAll() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.createQuery("SELECT u FROM User u ORDER BY u.createdAt DESC", User.class)
                     .getResultList();
-        } finally {
-            em.close();
         }
     }
 }

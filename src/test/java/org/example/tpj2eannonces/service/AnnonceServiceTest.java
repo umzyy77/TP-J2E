@@ -98,11 +98,11 @@ class AnnonceServiceTest {
     @Test
     void publish_shouldChangeStatusToPublished() {
         Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"));
-        assertThat(annonce.isDraft()).isTrue();
+        assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
 
         Annonce published = annonceService.publish(annonce.getId());
 
-        assertThat(published.isPublished()).isTrue();
+        assertThat(published.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
     }
 
     @Test
@@ -112,7 +112,7 @@ class AnnonceServiceTest {
 
         Annonce archived = annonceService.archive(annonce.getId());
 
-        assertThat(archived.isArchived()).isTrue();
+        assertThat(archived.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
     }
 
     @Test

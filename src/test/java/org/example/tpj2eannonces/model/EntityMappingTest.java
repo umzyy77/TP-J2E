@@ -108,22 +108,20 @@ class EntityMappingTest {
     @Test
     void annonce_publishShouldChangeStatus() {
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
-        assertThat(annonce.isDraft()).isTrue();
+        assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
 
-        annonce.publish();
+        annonce.setStatus(AnnonceStatus.PUBLISHED);
 
-        assertThat(annonce.isPublished()).isTrue();
         assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
     }
 
     @Test
     void annonce_archiveShouldChangeStatus() {
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
-        annonce.publish();
+        annonce.setStatus(AnnonceStatus.PUBLISHED);
 
-        annonce.archive();
+        annonce.setStatus(AnnonceStatus.ARCHIVED);
 
-        assertThat(annonce.isArchived()).isTrue();
         assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
     }
 

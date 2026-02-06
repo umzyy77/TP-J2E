@@ -14,26 +14,21 @@ import jakarta.persistence.EntityManager;
 
 public class AnnonceService {
 
+    private static final String PARAM_STATUS = "status";
+
     public Annonce create(Annonce annonce) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             em.persist(annonce);
             em.getTransaction().commit();
             return annonce;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la création de l'annonce", e);
-        } finally {
-            em.close();
         }
     }
 
     public Annonce create(Annonce annonce, UUID authorId, UUID categoryId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
 
             if (authorId != null) {
@@ -56,92 +51,56 @@ public class AnnonceService {
             em.getTransaction().commit();
             return annonce;
         } catch (ServiceException e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw e;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la création de l'annonce", e);
-        } finally {
-            em.close();
         }
     }
 
     public Annonce update(Annonce annonce) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             Annonce merged = em.merge(annonce);
             em.getTransaction().commit();
             return merged;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la mise à jour de l'annonce", e);
-        } finally {
-            em.close();
+        }
+    }
+
+    public Annonce changeStatus(UUID annonceId, String action) {
+        return AnnonceStatus.getTargetStatusForAction(action)
+            .map(targetStatus -> updateStatus(annonceId, targetStatus, action))
+            .orElseThrow(() -> new ServiceException("Action inconnue: " + action));
+    }
+
+    private Annonce updateStatus(UUID annonceId, AnnonceStatus targetStatus, String action) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            em.getTransaction().begin();
+            Annonce annonce = em.find(Annonce.class, annonceId);
+            if (annonce == null) {
+                throw new ServiceException("Annonce non trouvée: " + annonceId);
+            }
+            annonce.setStatus(targetStatus);
+            em.getTransaction().commit();
+            return annonce;
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ServiceException("Erreur lors de l'action " + action, e);
         }
     }
 
     public Annonce publish(UUID annonceId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-            Annonce annonce = em.find(Annonce.class, annonceId);
-            if (annonce == null) {
-                throw new ServiceException("Annonce non trouvée: " + annonceId);
-            }
-            annonce.publish();
-            em.getTransaction().commit();
-            return annonce;
-        } catch (ServiceException e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new ServiceException("Erreur lors de la publication de l'annonce", e);
-        } finally {
-            em.close();
-        }
+        return changeStatus(annonceId, "publish");
     }
 
     public Annonce archive(UUID annonceId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-            Annonce annonce = em.find(Annonce.class, annonceId);
-            if (annonce == null) {
-                throw new ServiceException("Annonce non trouvée: " + annonceId);
-            }
-            annonce.archive();
-            em.getTransaction().commit();
-            return annonce;
-        } catch (ServiceException e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new ServiceException("Erreur lors de l'archivage de l'annonce", e);
-        } finally {
-            em.close();
-        }
+        return changeStatus(annonceId, "archive");
     }
 
     public boolean delete(UUID annonceId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             Annonce annonce = em.find(Annonce.class, annonceId);
             if (annonce != null) {
@@ -152,28 +111,18 @@ public class AnnonceService {
             em.getTransaction().rollback();
             return false;
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
             throw new ServiceException("Erreur lors de la suppression de l'annonce", e);
-        } finally {
-            em.close();
         }
     }
 
     public Optional<Annonce> findById(UUID id) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            Annonce annonce = em.find(Annonce.class, id);
-            return Optional.ofNullable(annonce);
-        } finally {
-            em.close();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return Optional.ofNullable(em.find(Annonce.class, id));
         }
     }
 
     public Optional<Annonce> findByIdWithRelations(UUID id) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a " +
                     "LEFT JOIN FETCH a.author " +
                     "LEFT JOIN FETCH a.category " +
@@ -182,41 +131,32 @@ public class AnnonceService {
                     .setParameter("id", id)
                     .getResultStream()
                     .findFirst();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findAll(int page, int size) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category ORDER BY a.date DESC";
             return em.createQuery(jpql, Annonce.class)
                     .setFirstResult(page * size)
                     .setMaxResults(size)
                     .getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findAllPublished(int page, int size) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.status = :status ORDER BY a.date DESC";
             return em.createQuery(jpql, Annonce.class)
-                    .setParameter("status", AnnonceStatus.PUBLISHED)
+                    .setParameter(PARAM_STATUS, AnnonceStatus.PUBLISHED)
                     .setFirstResult(page * size)
                     .setMaxResults(size)
                     .getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> search(String keyword, int page, int size) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE " +
                     "LOWER(a.title) LIKE LOWER(:keyword) OR " +
                     "LOWER(a.description) LIKE LOWER(:keyword) " +
@@ -226,43 +166,51 @@ public class AnnonceService {
                     .setFirstResult(page * size)
                     .setMaxResults(size)
                     .getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByCategoryAndStatus(UUID categoryId, AnnonceStatus status, int page, int size) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.category.id = :categoryId AND a.status = :status ORDER BY a.date DESC";
             return em.createQuery(jpql, Annonce.class)
                     .setParameter("categoryId", categoryId)
-                    .setParameter("status", status)
+                    .setParameter(PARAM_STATUS, status)
                     .setFirstResult(page * size)
                     .setMaxResults(size)
                     .getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public long count() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.createQuery("SELECT COUNT(a) FROM Annonce a", Long.class).getSingleResult();
-        } finally {
-            em.close();
         }
     }
 
     public long countPublished() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.createQuery("SELECT COUNT(a) FROM Annonce a WHERE a.status = :status", Long.class)
-                    .setParameter("status", AnnonceStatus.PUBLISHED)
+                    .setParameter(PARAM_STATUS, AnnonceStatus.PUBLISHED)
                     .getSingleResult();
-        } finally {
-            em.close();
+        }
+    }
+
+    public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.author.id = :authorId ORDER BY a.date DESC";
+            return em.createQuery(jpql, Annonce.class)
+                    .setParameter("authorId", authorId)
+                    .setFirstResult(page * size)
+                    .setMaxResults(size)
+                    .getResultList();
+        }
+    }
+
+    public long countByAuthor(UUID authorId) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery("SELECT COUNT(a) FROM Annonce a WHERE a.author.id = :authorId", Long.class)
+                    .setParameter("authorId", authorId)
+                    .getSingleResult();
         }
     }
 }

@@ -1,9 +1,10 @@
-package org.example.tpj2eannonces.servlet;
+package org.example.tpj2eannonces.servlet.annonce;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.ServiceException;
+import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

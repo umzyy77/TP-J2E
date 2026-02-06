@@ -28,7 +28,8 @@ public class AuthenticationFilter implements Filter {
             "/logout",
             "/register",
             "/AnnonceList",
-            "/AnnonceDetail"
+            "/AnnonceDetail",
+            "/index.jsp"
     );
 
     private static final Set<String> STATIC_EXTENSIONS = Set.of(

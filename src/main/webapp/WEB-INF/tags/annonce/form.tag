@@ -16,13 +16,7 @@
             <h1 class="text-2xl font-bold tracking-tight"><c:out value="${title}"/></h1>
             <p class="mt-1 text-sm text-zinc-500"><c:out value="${subtitle}"/></p>
         </div>
-        <a class="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
-           href="${pageContext.request.contextPath}/AnnonceList">
-            <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Retour
-        </a>
+        <ui:backButton />
     </div>
 
     <c:if test="${not empty errorMessage}">
@@ -33,6 +27,7 @@
         <form class="space-y-6" method="post" action="${actionUrl}">
             <c:if test="${not empty annonceId}">
                 <input type="hidden" name="id" value="${annonceId}">
+                <input type="hidden" name="action" value="update">
             </c:if>
             <annonce:formFields annonce="${annonceObj}" />
             <div class="flex items-center gap-3 border-t border-zinc-200 pt-6">

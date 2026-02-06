@@ -9,70 +9,59 @@ import jakarta.persistence.TypedQuery;
 
 public class UserRepository extends GenericRepository<User> {
 
+    private static final String PARAM_USERNAME = "username";
+    private static final String PARAM_EMAIL = "email";
+    private static final String PARAM_PASSWORD = "password";
+
     public UserRepository() {
         super(User.class);
     }
 
     public Optional<User> findByUsername(String username) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT u FROM User u WHERE u.username = :username";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
-            query.setParameter("username", username);
+            query.setParameter(PARAM_USERNAME, username);
             return query.getResultStream().findFirst();
-        } finally {
-            em.close();
         }
     }
 
     public Optional<User> findByEmail(String email) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT u FROM User u WHERE u.email = :email";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
-            query.setParameter("email", email);
+            query.setParameter(PARAM_EMAIL, email);
             return query.getResultStream().findFirst();
-        } finally {
-            em.close();
         }
     }
 
     public boolean existsByUsername(String username) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT COUNT(u) FROM User u WHERE u.username = :username";
             Long count = em.createQuery(jpql, Long.class)
-                    .setParameter("username", username)
+                    .setParameter(PARAM_USERNAME, username)
                     .getSingleResult();
             return count > 0;
-        } finally {
-            em.close();
         }
     }
 
     public boolean existsByEmail(String email) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT COUNT(u) FROM User u WHERE u.email = :email";
             Long count = em.createQuery(jpql, Long.class)
-                    .setParameter("email", email)
+                    .setParameter(PARAM_EMAIL, email)
                     .getSingleResult();
             return count > 0;
-        } finally {
-            em.close();
         }
     }
 
     public Optional<User> findByUsernameAndPassword(String username, String password) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT u FROM User u WHERE u.username = :username AND u.password = :password";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
-            query.setParameter("username", username);
-            query.setParameter("password", password);
+            query.setParameter(PARAM_USERNAME, username);
+            query.setParameter(PARAM_PASSWORD, password);
             return query.getResultStream().findFirst();
-        } finally {
-            em.close();
         }
     }
 }

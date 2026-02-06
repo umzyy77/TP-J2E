@@ -1,10 +1,11 @@
-package org.example.tpj2eannonces.servlet;
+package org.example.tpj2eannonces.servlet.auth;
 
 import java.util.Optional;
 
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.service.UserService;
+import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

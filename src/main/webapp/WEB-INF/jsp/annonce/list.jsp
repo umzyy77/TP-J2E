@@ -8,9 +8,18 @@
                     <div class="space-y-6">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h1 class="text-2xl font-bold tracking-tight">Annonces</h1>
+                                <h1 class="text-2xl font-bold tracking-tight">
+                                    <c:choose>
+                                        <c:when test="${requestScope.filterByAuthor}">Mes annonces</c:when>
+                                        <c:otherwise>Annonces</c:otherwise>
+                                    </c:choose>
+                                </h1>
                                 <p class="mt-1 text-sm text-zinc-500">
-                                    <c:out value="${requestScope.annonceCount}" /> annonce(s) au total
+                                    <c:out value="${requestScope.annonceCount}" /> annonce(s)
+                                    <c:if test="${requestScope.filterByAuthor}">
+                                        - <a href="${pageContext.request.contextPath}/AnnonceList"
+                                            class="text-zinc-700 hover:underline">Voir toutes</a>
+                                    </c:if>
                                 </p>
                             </div>
                             <c:if test="${not empty sessionScope.loggedUser}">
@@ -139,7 +148,7 @@
                                                             <c:if
                                                                 test="${annonce.author.id == sessionScope.loggedUser.id}">
                                                                 <a class="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
-                                                                    href="${pageContext.request.contextPath}/AnnonceUpdate?id=${annonce.id}">
+                                                                    href="${pageContext.request.contextPath}/AnnoncePatch?id=${annonce.id}">
                                                                     Modifier
                                                                 </a>
                                                                 <button type="button" onclick="openDialog({

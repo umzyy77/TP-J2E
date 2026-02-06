@@ -147,7 +147,7 @@ class AnnonceRepositoryTest {
     void findByStatus_shouldFilterByStatus() {
         Annonce draft = repository.save(new Annonce("Draft", "Desc", "Addr", "mail@test.com"));
         Annonce published = repository.save(new Annonce("Published", "Desc", "Addr", "mail2@test.com"));
-        published.publish();
+        published.setStatus(AnnonceStatus.PUBLISHED);
         repository.update(published);
 
         List<Annonce> drafts = repository.findByStatus(AnnonceStatus.DRAFT);
@@ -200,7 +200,7 @@ class AnnonceRepositoryTest {
         repository.save(new Annonce("Draft 1", "Desc", "Addr", "mail@test.com"));
         repository.save(new Annonce("Draft 2", "Desc", "Addr", "mail2@test.com"));
         Annonce published = repository.save(new Annonce("Published", "Desc", "Addr", "mail3@test.com"));
-        published.publish();
+        published.setStatus(AnnonceStatus.PUBLISHED);
         repository.update(published);
 
         long draftCount = repository.countByStatus(AnnonceStatus.DRAFT);

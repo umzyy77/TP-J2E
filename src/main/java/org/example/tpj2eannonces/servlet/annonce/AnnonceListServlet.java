@@ -1,10 +1,12 @@
-package org.example.tpj2eannonces.servlet;
+package org.example.tpj2eannonces.servlet.annonce;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.ServiceException;
+import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +31,20 @@ public class AnnonceListServlet extends BaseServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
             int page = getPageParam(request);
-            List<Annonce> annonces = annonceService.findAll(page, PAGE_SIZE);
-            long totalCount = annonceService.count();
+            String authorParam = request.getParameter("author");
+            
+            List<Annonce> annonces;
+            long totalCount;
+            
+            if (authorParam != null && !authorParam.isEmpty()) {
+                UUID authorId = UUID.fromString(authorParam);
+                annonces = annonceService.findByAuthor(authorId, page, PAGE_SIZE);
+                totalCount = annonceService.countByAuthor(authorId);
+                request.setAttribute("filterByAuthor", true);
+            } else {
+                annonces = annonceService.findAll(page, PAGE_SIZE);
+                totalCount = annonceService.count();
+            }
 
             request.setAttribute("annonceList", annonces);
             request.setAttribute("annonceCount", totalCount);
@@ -39,6 +53,8 @@ public class AnnonceListServlet extends BaseServlet {
             request.setAttribute("totalPages", (int) Math.ceil((double) totalCount / PAGE_SIZE));
 
             forwardTo(request, response, VIEW_LIST);
+        } catch (IllegalArgumentException _) {
+            handleDatabaseError(request, response, "ID auteur invalide");
         } catch (ServiceException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
@@ -51,7 +67,7 @@ public class AnnonceListServlet extends BaseServlet {
         if (pageStr != null) {
             try {
                 return Math.max(0, Integer.parseInt(pageStr));
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 return 0;
             }
         }

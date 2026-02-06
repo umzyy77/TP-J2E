@@ -85,9 +85,6 @@ public class Annonce {
         if (this.date == null) {
             this.date = LocalDateTime.now();
         }
-        if (this.status == null) {
-            this.status = AnnonceStatus.DRAFT;
-        }
     }
 
     @PreUpdate
@@ -172,28 +169,6 @@ public class Annonce {
 
     public void setCategory(Category category) {
         this.category = category;
-    }
-
-    // Méthodes métier
-
-    public void publish() {
-        this.status = AnnonceStatus.PUBLISHED;
-    }
-
-    public void archive() {
-        this.status = AnnonceStatus.ARCHIVED;
-    }
-
-    public boolean isDraft() {
-        return this.status == AnnonceStatus.DRAFT;
-    }
-
-    public boolean isPublished() {
-        return this.status == AnnonceStatus.PUBLISHED;
-    }
-
-    public boolean isArchived() {
-        return this.status == AnnonceStatus.ARCHIVED;
     }
 
     @Override

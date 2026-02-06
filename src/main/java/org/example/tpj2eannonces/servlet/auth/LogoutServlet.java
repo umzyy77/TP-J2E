@@ -1,5 +1,6 @@
-package org.example.tpj2eannonces.servlet;
+package org.example.tpj2eannonces.servlet.auth;
 
+import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

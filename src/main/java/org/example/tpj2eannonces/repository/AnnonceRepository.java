@@ -11,145 +11,120 @@ import jakarta.persistence.TypedQuery;
 
 public class AnnonceRepository extends GenericRepository<Annonce> {
 
+    private static final String PARAM_STATUS = "status";
+    private static final String PARAM_CATEGORY_ID = "categoryId";
+    private static final String PARAM_AUTHOR_ID = "authorId";
+    private static final String PARAM_KEYWORD = "keyword";
+
     public AnnonceRepository() {
         super(Annonce.class);
     }
 
     public List<Annonce> searchByKeyword(String keyword) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE " +
                     "LOWER(a.title) LIKE LOWER(:keyword) OR " +
                     "LOWER(a.description) LIKE LOWER(:keyword) " +
                     "ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("keyword", "%" + keyword + "%");
+            query.setParameter(PARAM_KEYWORD, "%" + keyword + "%");
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> searchByKeyword(String keyword, int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE " +
                     "LOWER(a.title) LIKE LOWER(:keyword) OR " +
                     "LOWER(a.description) LIKE LOWER(:keyword) " +
                     "ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("keyword", "%" + keyword + "%");
+            query.setParameter(PARAM_KEYWORD, "%" + keyword + "%");
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByStatus(AnnonceStatus status) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.status = :status ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("status", status);
+            query.setParameter(PARAM_STATUS, status);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByStatus(AnnonceStatus status, int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.status = :status ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("status", status);
+            query.setParameter(PARAM_STATUS, status);
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByCategory(UUID categoryId) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.category.id = :categoryId ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("categoryId", categoryId);
+            query.setParameter(PARAM_CATEGORY_ID, categoryId);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByCategory(UUID categoryId, int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.category.id = :categoryId ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("categoryId", categoryId);
+            query.setParameter(PARAM_CATEGORY_ID, categoryId);
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByCategoryAndStatus(UUID categoryId, AnnonceStatus status) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.category.id = :categoryId AND a.status = :status ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("categoryId", categoryId);
-            query.setParameter("status", status);
+            query.setParameter(PARAM_CATEGORY_ID, categoryId);
+            query.setParameter(PARAM_STATUS, status);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByCategoryAndStatus(UUID categoryId, AnnonceStatus status, int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.category.id = :categoryId AND a.status = :status ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("categoryId", categoryId);
-            query.setParameter("status", status);
+            query.setParameter(PARAM_CATEGORY_ID, categoryId);
+            query.setParameter(PARAM_STATUS, status);
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByAuthor(UUID authorId) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.author.id = :authorId ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("authorId", authorId);
+            query.setParameter(PARAM_AUTHOR_ID, authorId);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
     public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a WHERE a.author.id = :authorId ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-            query.setParameter("authorId", authorId);
+            query.setParameter(PARAM_AUTHOR_ID, authorId);
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 
@@ -162,51 +137,39 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
     }
 
     public long countByStatus(AnnonceStatus status) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.status = :status";
             return em.createQuery(jpql, Long.class)
-                    .setParameter("status", status)
+                    .setParameter(PARAM_STATUS, status)
                     .getSingleResult();
-        } finally {
-            em.close();
         }
     }
 
     public long countByCategory(UUID categoryId) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :categoryId";
             return em.createQuery(jpql, Long.class)
-                    .setParameter("categoryId", categoryId)
+                    .setParameter(PARAM_CATEGORY_ID, categoryId)
                     .getSingleResult();
-        } finally {
-            em.close();
         }
     }
 
     @Override
     public List<Annonce> findAll() {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category ORDER BY a.date DESC";
             return em.createQuery(jpql, Annonce.class).getResultList();
-        } finally {
-            em.close();
         }
     }
 
     @Override
     public List<Annonce> findAll(int page, int size) {
-        EntityManager em = getEntityManager();
-        try {
+        try (EntityManager em = getEntityManager()) {
             String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
             query.setFirstResult(page * size);
             query.setMaxResults(size);
             return query.getResultList();
-        } finally {
-            em.close();
         }
     }
 }
