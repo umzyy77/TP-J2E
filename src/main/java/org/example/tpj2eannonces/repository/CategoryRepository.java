@@ -1,6 +1,8 @@
 package org.example.tpj2eannonces.repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Category;
 
@@ -29,6 +31,22 @@ public class CategoryRepository extends GenericRepository<Category> {
                     .setParameter("label", label)
                     .getSingleResult();
             return count > 0;
+        }
+    }
+
+    public List<Category> findAllOrderByLabel() {
+        try (EntityManager em = getEntityManager()) {
+            String jpql = "SELECT c FROM Category c ORDER BY c.label";
+            return em.createQuery(jpql, Category.class).getResultList();
+        }
+    }
+
+    public long countAnnoncesByCategory(UUID categoryId) {
+        try (EntityManager em = getEntityManager()) {
+            String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :id";
+            return em.createQuery(jpql, Long.class)
+                    .setParameter("id", categoryId)
+                    .getSingleResult();
         }
     }
 }

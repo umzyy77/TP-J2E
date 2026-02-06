@@ -1,5 +1,7 @@
 package org.example.tpj2eannonces.model;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -26,7 +28,11 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "annonce")
-public class Annonce {
+public class Annonce implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -7,7 +7,6 @@ import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.service.AnnonceService;
-import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
@@ -45,7 +44,7 @@ public class AnnoncePatchServlet extends BaseServlet {
             forwardTo(request, response, VIEW_UPDATE);
         } catch (ValidationException e) {
             handleNotFoundError(request, response, e.getMessage());
-        } catch (ServiceException e) {
+        } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);
@@ -59,14 +58,12 @@ public class AnnoncePatchServlet extends BaseServlet {
         try {
             UUID id = ValidationUtils.validateId(request.getParameter("id"));
             
-            // Action de changement de statut (publish, archive, etc.) ?
             if (AnnonceStatus.fromAction(action).isPresent()) {
                 annonceService.changeStatus(id, action);
                 redirectTo(response, request.getContextPath() + "/AnnonceDetail?id=" + id + "&success=" + action);
                 return;
             }
             
-            // Action update
             if ("update".equals(action)) {
                 handleUpdate(request, response, id);
                 return;
@@ -75,7 +72,7 @@ public class AnnoncePatchServlet extends BaseServlet {
             handleNotFoundError(request, response, "Action inconnue: " + action);
         } catch (ValidationException e) {
             handleNotFoundError(request, response, e.getMessage());
-        } catch (ServiceException e) {
+        } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);

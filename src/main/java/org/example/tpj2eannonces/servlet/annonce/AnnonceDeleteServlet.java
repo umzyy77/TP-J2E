@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.service.AnnonceService;
-import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
@@ -37,7 +36,7 @@ public class AnnonceDeleteServlet extends BaseServlet {
             redirectTo(response, request.getContextPath() + "/AnnonceList?success=delete");
         } catch (ValidationException e) {
             handleNotFoundError(request, response, e.getMessage());
-        } catch (ServiceException e) {
+        } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);

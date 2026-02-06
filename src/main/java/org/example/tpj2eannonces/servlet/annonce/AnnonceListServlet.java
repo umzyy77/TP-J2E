@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
-import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +54,7 @@ public class AnnonceListServlet extends BaseServlet {
             forwardTo(request, response, VIEW_LIST);
         } catch (IllegalArgumentException _) {
             handleDatabaseError(request, response, "ID auteur invalide");
-        } catch (ServiceException e) {
+        } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);

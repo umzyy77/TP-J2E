@@ -21,7 +21,7 @@ public final class PasswordUtils {
         if (hashedPassword.startsWith("$2")) {
             try {
                 return BCrypt.checkpw(password, hashedPassword);
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException _) {
                 return false;
             }
         }

@@ -10,6 +10,7 @@ import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
+import org.example.tpj2eannonces.repository.RepositoryException;
 import org.example.tpj2eannonces.utils.JPAUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -49,15 +50,12 @@ class AnnonceServiceTest {
     }
 
     private void cleanDatabase() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             em.createQuery("DELETE FROM Annonce").executeUpdate();
             em.createQuery("DELETE FROM User").executeUpdate();
             em.createQuery("DELETE FROM Category").executeUpdate();
             em.getTransaction().commit();
-        } finally {
-            em.close();
         }
     }
 
@@ -65,7 +63,7 @@ class AnnonceServiceTest {
     void create_shouldPersistAnnonce() {
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
 
-        Annonce created = annonceService.create(annonce);
+        Annonce created = annonceService.create(annonce, null, null);
 
         assertThat(created.getId()).isNotNull();
         assertThat(created.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
@@ -91,33 +89,33 @@ class AnnonceServiceTest {
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
 
         assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, null))
-                .isInstanceOf(ServiceException.class)
+                .isInstanceOf(RepositoryException.class)
                 .hasMessageContaining("Auteur non trouvé");
     }
 
     @Test
     void publish_shouldChangeStatusToPublished() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"));
+        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
         assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
 
-        Annonce published = annonceService.publish(annonce.getId());
+        Annonce published = annonceService.changeStatus(annonce.getId(), "publish");
 
         assertThat(published.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
     }
 
     @Test
     void archive_shouldChangeStatusToArchived() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"));
-        annonceService.publish(annonce.getId());
+        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
+        annonceService.changeStatus(annonce.getId(), "publish");
 
-        Annonce archived = annonceService.archive(annonce.getId());
+        Annonce archived = annonceService.changeStatus(annonce.getId(), "archive");
 
         assertThat(archived.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
     }
 
     @Test
     void delete_shouldRemoveAnnonce() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"));
+        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
 
         boolean deleted = annonceService.delete(annonce.getId());
 
@@ -127,9 +125,9 @@ class AnnonceServiceTest {
 
     @Test
     void findAllPublished_shouldReturnOnlyPublished() {
-        Annonce draft = annonceService.create(new Annonce("Draft", "Desc", "Addr", "mail@test.com"));
-        Annonce published = annonceService.create(new Annonce("Published", "Desc", "Addr", "mail2@test.com"));
-        annonceService.publish(published.getId());
+        annonceService.create(new Annonce("Draft", "Desc", "Addr", "mail@test.com"), null, null);
+        Annonce published = annonceService.create(new Annonce("Published", "Desc", "Addr", "mail2@test.com"), null, null);
+        annonceService.changeStatus(published.getId(), "publish");
 
         List<Annonce> result = annonceService.findAllPublished(0, 10);
 
@@ -139,8 +137,8 @@ class AnnonceServiceTest {
 
     @Test
     void search_shouldFindByKeyword() {
-        annonceService.create(new Annonce("Voiture à vendre", "Belle voiture", "Paris", "mail@test.com"));
-        annonceService.create(new Annonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com"));
+        annonceService.create(new Annonce("Voiture à vendre", "Belle voiture", "Paris", "mail@test.com"), null, null);
+        annonceService.create(new Annonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com"), null, null);
 
         List<Annonce> results = annonceService.search("voiture", 0, 10);
 
@@ -149,8 +147,8 @@ class AnnonceServiceTest {
 
     @Test
     void count_shouldReturnTotal() {
-        annonceService.create(new Annonce("Titre 1", "Desc", "Addr", "mail@test.com"));
-        annonceService.create(new Annonce("Titre 2", "Desc", "Addr", "mail2@test.com"));
+        annonceService.create(new Annonce("Titre 1", "Desc", "Addr", "mail@test.com"), null, null);
+        annonceService.create(new Annonce("Titre 2", "Desc", "Addr", "mail2@test.com"), null, null);
 
         long count = annonceService.count();
 

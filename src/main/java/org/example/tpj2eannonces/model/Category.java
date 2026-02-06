@@ -1,5 +1,7 @@
 package org.example.tpj2eannonces.model;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,7 +19,10 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "category")
-public class Category {
+public class Category implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

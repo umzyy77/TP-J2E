@@ -1,9 +1,13 @@
 package org.example.tpj2eannonces.servlet;
 
+import java.io.IOException;
+
+import org.slf4j.Logger;
+
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
 
 public abstract class BaseServlet extends HttpServlet {
     protected static final String VIEW_404 = "/WEB-INF/jsp/errors/404.jsp";
@@ -15,7 +19,7 @@ public abstract class BaseServlet extends HttpServlet {
     protected void forwardTo(HttpServletRequest request, HttpServletResponse response, String view) {
         try {
             request.getRequestDispatcher(view).forward(request, response);
-        } catch (Exception e) {
+        } catch (ServletException | IOException e) {
             handleError(response, e);
         }
     }
@@ -23,7 +27,7 @@ public abstract class BaseServlet extends HttpServlet {
     protected void redirectTo(HttpServletResponse response, String url) {
         try {
             response.sendRedirect(url);
-        } catch (Exception e) {
+        } catch (IOException e) {
             handleError(response, e);
         }
     }
@@ -42,7 +46,7 @@ public abstract class BaseServlet extends HttpServlet {
         getLogger().error("Erreur inattendue dans {}", getClass().getSimpleName(), e);
         try {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        } catch (Exception _) {
+        } catch (IOException _) {
             // Impossible de répondre au client
         }
     }

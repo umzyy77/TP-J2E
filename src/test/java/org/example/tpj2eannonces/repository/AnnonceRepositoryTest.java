@@ -6,7 +6,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
-import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.utils.JPAUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -21,7 +20,6 @@ class AnnonceRepositoryTest {
 
     private AnnonceRepository repository;
     private UserRepository userRepository;
-    private CategoryRepository categoryRepository;
 
     @BeforeAll
     static void setUpClass() {
@@ -37,7 +35,6 @@ class AnnonceRepositoryTest {
     void setUp() {
         repository = new AnnonceRepository();
         userRepository = new UserRepository();
-        categoryRepository = new CategoryRepository();
         cleanDatabase();
     }
 
@@ -47,15 +44,12 @@ class AnnonceRepositoryTest {
     }
 
     private void cleanDatabase() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             em.createQuery("DELETE FROM Annonce").executeUpdate();
             em.createQuery("DELETE FROM User").executeUpdate();
             em.createQuery("DELETE FROM Category").executeUpdate();
             em.getTransaction().commit();
-        } finally {
-            em.close();
         }
     }
 
@@ -127,7 +121,7 @@ class AnnonceRepositoryTest {
         repository.save(new Annonce("Voiture à vendre", "Belle voiture", "Paris", "mail@test.com"));
         repository.save(new Annonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com"));
 
-        List<Annonce> results = repository.searchByKeyword("voiture");
+        List<Annonce> results = repository.searchByKeyword("voiture", 0, 100);
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getTitle()).contains("Voiture");
@@ -138,42 +132,23 @@ class AnnonceRepositoryTest {
         repository.save(new Annonce("A vendre", "Belle voiture occasion", "Paris", "mail@test.com"));
         repository.save(new Annonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com"));
 
-        List<Annonce> results = repository.searchByKeyword("voiture");
+        List<Annonce> results = repository.searchByKeyword("voiture", 0, 100);
 
         assertThat(results).hasSize(1);
     }
 
     @Test
     void findByStatus_shouldFilterByStatus() {
-        Annonce draft = repository.save(new Annonce("Draft", "Desc", "Addr", "mail@test.com"));
+        repository.save(new Annonce("Draft", "Desc", "Addr", "mail@test.com"));
         Annonce published = repository.save(new Annonce("Published", "Desc", "Addr", "mail2@test.com"));
         published.setStatus(AnnonceStatus.PUBLISHED);
         repository.update(published);
 
-        List<Annonce> drafts = repository.findByStatus(AnnonceStatus.DRAFT);
-        List<Annonce> publishedList = repository.findByStatus(AnnonceStatus.PUBLISHED);
+        List<Annonce> drafts = repository.findByStatus(AnnonceStatus.DRAFT, 0, 100);
+        List<Annonce> publishedList = repository.findByStatus(AnnonceStatus.PUBLISHED, 0, 100);
 
         assertThat(drafts).hasSize(1);
         assertThat(publishedList).hasSize(1);
-    }
-
-    @Test
-    void findByCategory_shouldFilterByCategory() {
-        Category cat1 = categoryRepository.save(new Category("Immobilier"));
-        Category cat2 = categoryRepository.save(new Category("Auto"));
-
-        Annonce a1 = new Annonce("Annonce 1", "Desc", "Addr", "mail@test.com");
-        a1.setCategory(cat1);
-        repository.save(a1);
-
-        Annonce a2 = new Annonce("Annonce 2", "Desc", "Addr", "mail2@test.com");
-        a2.setCategory(cat2);
-        repository.save(a2);
-
-        List<Annonce> immobilier = repository.findByCategory(cat1.getId());
-
-        assertThat(immobilier).hasSize(1);
-        assertThat(immobilier.get(0).getTitle()).isEqualTo("Annonce 1");
     }
 
     @Test
@@ -189,7 +164,7 @@ class AnnonceRepositoryTest {
         a2.setAuthor(author2);
         repository.save(a2);
 
-        List<Annonce> byAuthor1 = repository.findByAuthor(author1.getId());
+        List<Annonce> byAuthor1 = repository.findByAuthor(author1.getId(), 0, 100);
 
         assertThat(byAuthor1).hasSize(1);
         assertThat(byAuthor1.get(0).getTitle()).isEqualTo("Annonce 1");

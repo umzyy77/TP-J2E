@@ -1,5 +1,6 @@
 package org.example.tpj2eannonces.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.example.tpj2eannonces.model.User;
@@ -62,6 +63,13 @@ public class UserRepository extends GenericRepository<User> {
             query.setParameter(PARAM_USERNAME, username);
             query.setParameter(PARAM_PASSWORD, password);
             return query.getResultStream().findFirst();
+        }
+    }
+
+    public List<User> findAllOrderByCreatedAt() {
+        try (EntityManager em = getEntityManager()) {
+            String jpql = "SELECT u FROM User u ORDER BY u.createdAt DESC";
+            return em.createQuery(jpql, User.class).getResultList();
         }
     }
 }

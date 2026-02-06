@@ -30,22 +30,18 @@ class JPAUtilTest {
 
     @Test
     void getEntityManager_shouldReturnOpenEntityManager() {
-        EntityManager em = JPAUtil.getEntityManager();
-
-        assertThat(em).isNotNull();
-        assertThat(em.isOpen()).isTrue();
-
-        em.close();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            assertThat(em).isNotNull();
+            assertThat(em.isOpen()).isTrue();
+        }
     }
 
     @Test
     void entityManager_shouldConnectToDatabase() {
-        EntityManager em = JPAUtil.getEntityManager();
-        Object result = em.createNativeQuery("SELECT 1").getSingleResult();
-
-        assertThat(result).isNotNull();
-
-        em.close();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            Object result = em.createNativeQuery("SELECT 1").getSingleResult();
+            assertThat(result).isNotNull();
+        }
     }
 
     @Test

@@ -1,9 +1,11 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
+import java.util.UUID;
+
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
+import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.AnnonceService;
-import org.example.tpj2eannonces.service.ServiceException;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "annonceAddServlet", urlPatterns = "/AnnonceAdd")
 public class AnnonceAddServlet extends BaseServlet {
@@ -50,7 +53,16 @@ public class AnnonceAddServlet extends BaseServlet {
             annonce.setAdress(ValidationUtils.validateAdress(annonce.getAdress()));
             annonce.setMail(ValidationUtils.validateEmail(annonce.getMail()));
 
-            Annonce created = annonceService.create(annonce);
+            HttpSession session = request.getSession(false);
+            UUID authorId = null;
+            if (session != null && session.getAttribute("user") != null) {
+                User user = (User) session.getAttribute("user");
+                authorId = user.getId();
+            }
+
+            UUID categoryId = null;
+
+            Annonce created = annonceService.create(annonce, authorId, categoryId);
             if (created == null || created.getId() == null) {
                 request.setAttribute(ATTR_MESSAGE, "Erreur lors de l'enregistrement.");
                 request.setAttribute(ATTR_ANNONCE, annonce);
@@ -63,10 +75,11 @@ public class AnnonceAddServlet extends BaseServlet {
             request.setAttribute(ATTR_MESSAGE, e.getMessage());
             request.setAttribute(ATTR_ANNONCE, annonce);
             forwardTo(request, response, VIEW_ADD);
-        } catch (ServiceException e) {
+        } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {
             handleError(response, e);
         }
     }
 }
+
