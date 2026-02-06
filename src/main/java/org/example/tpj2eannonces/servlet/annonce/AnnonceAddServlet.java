@@ -7,6 +7,7 @@ import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
+import org.example.tpj2eannonces.servlet.auth.LoginServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +56,8 @@ public class AnnonceAddServlet extends BaseServlet {
 
             HttpSession session = request.getSession(false);
             UUID authorId = null;
-            if (session != null && session.getAttribute("user") != null) {
-                User user = (User) session.getAttribute("user");
+            if (session != null && session.getAttribute(LoginServlet.SESSION_USER) != null) {
+                User user = (User) session.getAttribute(LoginServlet.SESSION_USER);
                 authorId = user.getId();
             }
 
