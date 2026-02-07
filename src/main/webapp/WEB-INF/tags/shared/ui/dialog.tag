@@ -1,10 +1,10 @@
 <%@ tag pageEncoding="UTF-8" %>
 
-<!-- Confirm Dialog (Generic) -->
+
 <div id="confirmDialog" class="fixed inset-0 z-50 hidden">
-    <!-- Backdrop -->
+
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDialog()"></div>
-    <!-- Dialog -->
+
     <div class="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 p-4">
         <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-lg">
             <div class="flex items-start gap-4">
@@ -39,8 +39,7 @@
         document.getElementById('dialogMessage').textContent = message || 'Êtes-vous sûr ?';
         document.getElementById('dialogConfirmBtn').textContent = confirmLabel || 'Confirmer';
         document.getElementById('dialogConfirmBtn').href = url;
-        
-        // Set variant colors
+
         const icon = document.getElementById('dialogIcon');
         const btn = document.getElementById('dialogConfirmBtn');
         

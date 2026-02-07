@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "annonceListServlet", urlPatterns = "/AnnonceList")
 public class AnnonceListServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnonceListServlet.class);
-    private static final String VIEW_LIST = "/WEB-INF/jsp/annonce/list.jsp";
+    private static final String VIEW_LIST = "/WEB-INF/jsp/features/annonce/pages/list.jsp";
     private static final int PAGE_SIZE = 20;
 
     private final transient AnnonceService annonceService = new AnnonceService();
@@ -63,6 +63,7 @@ public class AnnonceListServlet extends BaseServlet {
             }
 
             request.setAttribute("categories", categoryService.findAll());
+            request.setAttribute("statuses", AnnonceStatus.values());
             request.setAttribute("annonceList", annonces);
             request.setAttribute("annonceCount", totalCount);
             request.setAttribute("currentPage", page);

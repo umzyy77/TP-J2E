@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "annonceAddServlet", urlPatterns = "/AnnonceAdd")
 public class AnnonceAddServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnonceAddServlet.class);
-    private static final String VIEW_ADD = "/WEB-INF/jsp/annonce/add.jsp";
+    private static final String VIEW_ADD = "/WEB-INF/jsp/features/annonce/pages/add.jsp";
     private static final String ATTR_ANNONCE = "annonce";
 
     private final transient AnnonceService annonceService = new AnnonceService();

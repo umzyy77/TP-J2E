@@ -14,7 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "registerServlet", urlPatterns = "/register")
 public class RegisterServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(RegisterServlet.class);
-    private static final String VIEW_REGISTER = "/WEB-INF/jsp/auth/register.jsp";
+    private static final String VIEW_REGISTER = "/WEB-INF/jsp/features/auth/pages/register.jsp";
     private static final String ATTR_USERNAME = "username";
     private static final String ATTR_EMAIL = "email";
 

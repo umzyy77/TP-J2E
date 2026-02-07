@@ -3,16 +3,18 @@ package org.example.tpj2eannonces.model;
 import java.util.Optional;
 
 public enum AnnonceStatus {
-    DRAFT("publish", "Publier"),
-    PUBLISHED("archive", "Archiver"),
-    ARCHIVED(null, null);
+    DRAFT("publish", "Publier", "Brouillon"),
+    PUBLISHED("archive", "Archiver", "Publié"),
+    ARCHIVED(null, null, "Archivé");
 
     private final String actionName;
     private final String actionLabel;
+    private final String displayLabel;
 
-    AnnonceStatus(String actionName, String actionLabel) {
+    AnnonceStatus(String actionName, String actionLabel, String displayLabel) {
         this.actionName = actionName;
         this.actionLabel = actionLabel;
+        this.displayLabel = displayLabel;
     }
 
     public AnnonceStatus getNextStatus() {
@@ -27,6 +29,10 @@ public enum AnnonceStatus {
 
     public String getActionLabel() {
         return actionLabel;
+    }
+
+    public String getDisplayLabel() {
+        return displayLabel;
     }
 
     public boolean hasAction() {

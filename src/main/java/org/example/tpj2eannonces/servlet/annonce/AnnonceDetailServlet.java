@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "annonceDetailServlet", urlPatterns = "/AnnonceDetail")
 public class AnnonceDetailServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnonceDetailServlet.class);
-    private static final String VIEW_DETAIL = "/WEB-INF/jsp/annonce/detail.jsp";
+    private static final String VIEW_DETAIL = "/WEB-INF/jsp/features/annonce/pages/detail.jsp";
 
     private final transient AnnonceService annonceService = new AnnonceService();
 

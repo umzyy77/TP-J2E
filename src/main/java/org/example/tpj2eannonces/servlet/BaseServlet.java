@@ -10,8 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public abstract class BaseServlet extends HttpServlet {
-    protected static final String VIEW_404 = "/WEB-INF/jsp/errors/404.jsp";
-    protected static final String VIEW_500 = "/WEB-INF/jsp/errors/500.jsp";
+    protected static final String VIEW_404 = "/WEB-INF/jsp/features/errors/pages/404.jsp";
+    protected static final String VIEW_500 = "/WEB-INF/jsp/features/errors/pages/500.jsp";
     protected static final String ATTR_MESSAGE = "message";
 
     protected abstract Logger getLogger();

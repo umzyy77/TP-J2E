@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "annoncePatchServlet", urlPatterns = "/AnnoncePatch")
 public class AnnoncePatchServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnoncePatchServlet.class);
-    private static final String VIEW_UPDATE = "/WEB-INF/jsp/annonce/update.jsp";
+    private static final String VIEW_UPDATE = "/WEB-INF/jsp/features/annonce/pages/update.jsp";
     private static final String ATTR_ANNONCE = "annonce";
 
     private final transient AnnonceService annonceService = new AnnonceService();

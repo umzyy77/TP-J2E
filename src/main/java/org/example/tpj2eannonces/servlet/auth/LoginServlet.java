@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "loginServlet", urlPatterns = "/login")
 public class LoginServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(LoginServlet.class);
-    private static final String VIEW_LOGIN = "/WEB-INF/jsp/auth/login.jsp";
+    private static final String VIEW_LOGIN = "/WEB-INF/jsp/features/auth/pages/login.jsp";
     public static final String SESSION_USER = "loggedUser";
     private static final String ATTR_USERNAME = "username";
 

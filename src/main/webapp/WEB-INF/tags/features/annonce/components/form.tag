@@ -1,7 +1,7 @@
 <%@ tag pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="ui" tagdir="/WEB-INF/tags/ui" %>
-<%@ taglib prefix="annonce" tagdir="/WEB-INF/tags/annonce" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags/shared/ui" %>
+<%@ taglib prefix="annonce" tagdir="/WEB-INF/tags/features/annonce/components" %>
 <%@ attribute name="title" required="true" %>
 <%@ attribute name="subtitle" required="true" %>
 <%@ attribute name="actionUrl" required="true" %>
