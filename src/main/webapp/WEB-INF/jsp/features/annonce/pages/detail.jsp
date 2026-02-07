@@ -7,14 +7,12 @@
 
 <layout:page title="${annonce.title} - MasterAnnonce">
     <div class="space-y-6">
-        <%-- Header with breadcrumb and back button --%>
         <ui:breadcrumb parentLabel="Annonces"
             parentHref="${pageContext.request.contextPath}/AnnonceList"
             currentLabel="${annonce.title}">
             <ui:backButton />
         </ui:breadcrumb>
 
-        <%-- Success messages --%>
         <c:set var="successMessages" value="${{
             'publish': 'Annonce publiée avec succès !',
             'archive': 'Annonce archivée avec succès !'
@@ -23,7 +21,6 @@
             <ui:alert variant="success" message="${successMessages[param.success]}" />
         </c:if>
 
-        <%-- Main content card --%>
         <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
             <%-- Header --%>
             <div class="border-b border-zinc-200 p-6">
@@ -41,9 +38,7 @@
                 </div>
             </div>
 
-            <%-- Body --%>
             <div class="p-6 space-y-6">
-                <%-- Meta info --%>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <c:if test="${not empty annonce.author}">
                         <div class="flex items-center gap-3">
@@ -75,7 +70,6 @@
                     </c:if>
                 </div>
 
-                <%-- Description --%>
                 <div>
                     <h2 class="text-sm font-medium text-zinc-900">Description</h2>
                     <p class="mt-2 text-zinc-600">
@@ -83,7 +77,6 @@
                     </p>
                 </div>
 
-                <%-- Contact info --%>
                 <div class="rounded-lg bg-zinc-50 p-4">
                     <h2 class="text-sm font-medium text-zinc-900 mb-3">Contact</h2>
                     <div class="space-y-2 text-sm">
@@ -108,7 +101,6 @@
                 </div>
             </div>
 
-            <%-- Actions footer --%>
             <div class="border-t border-zinc-200 p-6">
                 <div class="flex flex-wrap items-center gap-3">
                     <c:if test="${not empty sessionScope.loggedUser && not empty annonce.author}">

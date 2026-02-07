@@ -67,7 +67,6 @@
                 dropdown.classList.toggle('hidden');
             }
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function (event) {
                 const userMenu = document.getElementById('userMenu');
                 const dropdown = document.getElementById('userMenuDropdown');
