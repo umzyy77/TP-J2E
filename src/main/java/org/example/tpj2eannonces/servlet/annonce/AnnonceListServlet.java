@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Annonce;
+import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
@@ -34,6 +35,7 @@ public class AnnonceListServlet extends BaseServlet {
             int page = getPageParam(request);
             String authorParam = request.getParameter("author");
             String categoryParam = request.getParameter("category");
+            String statusParam = request.getParameter("status");
 
             List<Annonce> annonces;
             long totalCount;
@@ -49,6 +51,12 @@ public class AnnonceListServlet extends BaseServlet {
                 totalCount = annonceService.countByCategory(categoryId);
                 request.setAttribute("filterByCategory", true);
                 request.setAttribute("selectedCategory", categoryParam);
+            } else if (statusParam != null && !statusParam.isEmpty()) {
+                AnnonceStatus status = AnnonceStatus.valueOf(statusParam);
+                annonces = annonceService.findByStatus(status, page, PAGE_SIZE);
+                totalCount = annonceService.countByStatus(status);
+                request.setAttribute("filterByStatus", true);
+                request.setAttribute("selectedStatus", statusParam);
             } else {
                 annonces = annonceService.findAll(page, PAGE_SIZE);
                 totalCount = annonceService.count();

@@ -16,7 +16,7 @@
                                 </h1>
                                 <p class="mt-1 text-sm text-zinc-500">
                                     <c:out value="${requestScope.annonceCount}" /> annonce(s)
-                                    <c:if test="${requestScope.filterByAuthor || requestScope.filterByCategory}">
+                                    <c:if test="${requestScope.filterByAuthor || requestScope.filterByCategory || requestScope.filterByStatus}">
                                         - <a href="${pageContext.request.contextPath}/AnnonceList"
                                             class="text-zinc-700 hover:underline">Voir toutes</a>
                                     </c:if>
@@ -34,20 +34,32 @@
                             </c:if>
                         </div>
 
-                        <c:if test="${not empty requestScope.categories}">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <c:if test="${not empty requestScope.categories}">
+                                <div class="flex items-center gap-2">
+                                    <label for="categoryFilter" class="text-sm font-medium text-zinc-700">Catégorie :</label>
+                                    <select id="categoryFilter" onchange="if(this.value){location.href='${pageContext.request.contextPath}/AnnonceList?category='+this.value}else{location.href='${pageContext.request.contextPath}/AnnonceList'}"
+                                        class="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm">
+                                        <option value="">Toutes</option>
+                                        <c:forEach items="${requestScope.categories}" var="cat">
+                                            <option value="${cat.id}" <c:if test="${cat.id == requestScope.selectedCategory}">selected</c:if>>
+                                                <c:out value="${cat.label}" />
+                                            </option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+                            </c:if>
                             <div class="flex items-center gap-2">
-                                <label for="categoryFilter" class="text-sm font-medium text-zinc-700">Catégorie :</label>
-                                <select id="categoryFilter" onchange="if(this.value){location.href='${pageContext.request.contextPath}/AnnonceList?category='+this.value}else{location.href='${pageContext.request.contextPath}/AnnonceList'}"
+                                <label for="statusFilter" class="text-sm font-medium text-zinc-700">Statut :</label>
+                                <select id="statusFilter" onchange="if(this.value){location.href='${pageContext.request.contextPath}/AnnonceList?status='+this.value}else{location.href='${pageContext.request.contextPath}/AnnonceList'}"
                                     class="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm">
-                                    <option value="">Toutes</option>
-                                    <c:forEach items="${requestScope.categories}" var="cat">
-                                        <option value="${cat.id}" <c:if test="${cat.id == requestScope.selectedCategory}">selected</c:if>>
-                                            <c:out value="${cat.label}" />
-                                        </option>
-                                    </c:forEach>
+                                    <option value="">Tous</option>
+                                    <option value="DRAFT" <c:if test="${requestScope.selectedStatus == 'DRAFT'}">selected</c:if>>Brouillon</option>
+                                    <option value="PUBLISHED" <c:if test="${requestScope.selectedStatus == 'PUBLISHED'}">selected</c:if>>Publié</option>
+                                    <option value="ARCHIVED" <c:if test="${requestScope.selectedStatus == 'ARCHIVED'}">selected</c:if>>Archivé</option>
                                 </select>
                             </div>
-                        </c:if>
+                        </div>
 
                         <c:if test="${param.success == 'create'}">
                             <ui:alert variant="success" message="Annonce créée avec succès." />

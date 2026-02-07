@@ -62,6 +62,14 @@ public class AnnonceService {
         return repository.count();
     }
 
+    public List<Annonce> findByStatus(AnnonceStatus status, int page, int size) {
+        return repository.findByStatus(status, page, size);
+    }
+
+    public long countByStatus(AnnonceStatus status) {
+        return repository.countByStatus(status);
+    }
+
     public long countPublished() {
         return repository.countByStatus(AnnonceStatus.PUBLISHED);
     }
