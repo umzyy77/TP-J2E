@@ -73,4 +73,12 @@ public class AnnonceService {
     public long countByAuthor(UUID authorId) {
         return repository.countByAuthor(authorId);
     }
+
+    public List<Annonce> findByCategory(UUID categoryId, int page, int size) {
+        return repository.findByCategory(categoryId, page, size);
+    }
+
+    public long countByCategory(UUID categoryId) {
+        return repository.countByCategory(categoryId);
+    }
 }

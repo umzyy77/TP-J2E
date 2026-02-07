@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
+import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ public class AnnonceListServlet extends BaseServlet {
     private static final int PAGE_SIZE = 20;
 
     private final transient AnnonceService annonceService = new AnnonceService();
+    private final transient CategoryService categoryService = new CategoryService();
 
     @Override
     protected Logger getLogger() {
@@ -31,20 +33,28 @@ public class AnnonceListServlet extends BaseServlet {
         try {
             int page = getPageParam(request);
             String authorParam = request.getParameter("author");
-            
+            String categoryParam = request.getParameter("category");
+
             List<Annonce> annonces;
             long totalCount;
-            
+
             if (authorParam != null && !authorParam.isEmpty()) {
                 UUID authorId = UUID.fromString(authorParam);
                 annonces = annonceService.findByAuthor(authorId, page, PAGE_SIZE);
                 totalCount = annonceService.countByAuthor(authorId);
                 request.setAttribute("filterByAuthor", true);
+            } else if (categoryParam != null && !categoryParam.isEmpty()) {
+                UUID categoryId = UUID.fromString(categoryParam);
+                annonces = annonceService.findByCategory(categoryId, page, PAGE_SIZE);
+                totalCount = annonceService.countByCategory(categoryId);
+                request.setAttribute("filterByCategory", true);
+                request.setAttribute("selectedCategory", categoryParam);
             } else {
                 annonces = annonceService.findAll(page, PAGE_SIZE);
                 totalCount = annonceService.count();
             }
 
+            request.setAttribute("categories", categoryService.findAll());
             request.setAttribute("annonceList", annonces);
             request.setAttribute("annonceCount", totalCount);
             request.setAttribute("currentPage", page);

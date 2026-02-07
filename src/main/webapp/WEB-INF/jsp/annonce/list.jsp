@@ -16,7 +16,7 @@
                                 </h1>
                                 <p class="mt-1 text-sm text-zinc-500">
                                     <c:out value="${requestScope.annonceCount}" /> annonce(s)
-                                    <c:if test="${requestScope.filterByAuthor}">
+                                    <c:if test="${requestScope.filterByAuthor || requestScope.filterByCategory}">
                                         - <a href="${pageContext.request.contextPath}/AnnonceList"
                                             class="text-zinc-700 hover:underline">Voir toutes</a>
                                     </c:if>
@@ -33,6 +33,21 @@
                                 </a>
                             </c:if>
                         </div>
+
+                        <c:if test="${not empty requestScope.categories}">
+                            <div class="flex items-center gap-2">
+                                <label for="categoryFilter" class="text-sm font-medium text-zinc-700">Catégorie :</label>
+                                <select id="categoryFilter" onchange="if(this.value){location.href='${pageContext.request.contextPath}/AnnonceList?category='+this.value}else{location.href='${pageContext.request.contextPath}/AnnonceList'}"
+                                    class="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm">
+                                    <option value="">Toutes</option>
+                                    <c:forEach items="${requestScope.categories}" var="cat">
+                                        <option value="${cat.id}" <c:if test="${cat.id == requestScope.selectedCategory}">selected</c:if>>
+                                            <c:out value="${cat.label}" />
+                                        </option>
+                                    </c:forEach>
+                                </select>
+                            </div>
+                        </c:if>
 
                         <c:if test="${param.success == 'create'}">
                             <ui:alert variant="success" message="Annonce créée avec succès." />

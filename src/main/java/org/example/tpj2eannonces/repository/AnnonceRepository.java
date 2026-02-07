@@ -16,6 +16,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
     private static final String PARAM_STATUS = "status";
     private static final String PARAM_AUTHOR_ID = "authorId";
     private static final String PARAM_KEYWORD = "keyword";
+    private static final String PARAM_CATEGORY_ID = "categoryId";
 
     public AnnonceRepository() {
         super(Annonce.class);
@@ -62,8 +63,9 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
 
     public List<Annonce> searchByKeyword(String keyword, int page, int size) {
         try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT a FROM Annonce a WHERE " +
-                    "LOWER(a.title) LIKE LOWER(:keyword) OR " +
+            String jpql = "SELECT a FROM Annonce a " +
+                    "LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category " +
+                    "WHERE LOWER(a.title) LIKE LOWER(:keyword) OR " +
                     "LOWER(a.description) LIKE LOWER(:keyword) " +
                     "ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
@@ -76,7 +78,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
 
     public List<Annonce> findByStatus(AnnonceStatus status, int page, int size) {
         try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT a FROM Annonce a WHERE a.status = :status ORDER BY a.date DESC";
+            String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.status = :status ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
             query.setParameter(PARAM_STATUS, status);
             query.setFirstResult(page * size);
@@ -87,7 +89,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
 
     public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
         try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT a FROM Annonce a WHERE a.author.id = :authorId ORDER BY a.date DESC";
+            String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.author.id = :authorId ORDER BY a.date DESC";
             TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
             query.setParameter(PARAM_AUTHOR_ID, authorId);
             query.setFirstResult(page * size);
@@ -115,6 +117,26 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
                     .setParameter("id", id)
                     .getResultStream()
                     .findFirst();
+        }
+    }
+
+    public List<Annonce> findByCategory(UUID categoryId, int page, int size) {
+        try (EntityManager em = getEntityManager()) {
+            String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.category.id = :categoryId ORDER BY a.date DESC";
+            TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
+            query.setParameter(PARAM_CATEGORY_ID, categoryId);
+            query.setFirstResult(page * size);
+            query.setMaxResults(size);
+            return query.getResultList();
+        }
+    }
+
+    public long countByCategory(UUID categoryId) {
+        try (EntityManager em = getEntityManager()) {
+            String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :categoryId";
+            return em.createQuery(jpql, Long.class)
+                    .setParameter(PARAM_CATEGORY_ID, categoryId)
+                    .getSingleResult();
         }
     }
 
