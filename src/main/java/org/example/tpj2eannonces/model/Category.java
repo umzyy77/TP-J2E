@@ -1,10 +1,8 @@
 package org.example.tpj2eannonces.model;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +16,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "category")
-public class Category implements Serializable {
+public class Category extends BaseEntity<Long> {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -68,15 +66,15 @@ public class Category implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Category category = (Category) o;
-        return Objects.equals(id, category.id);
+        if (!(o instanceof Category category)) {
+            return false;
+        }
+        return super.equals(category);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return 31 * super.hashCode();
     }
 
     @Override

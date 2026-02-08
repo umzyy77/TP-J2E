@@ -73,23 +73,33 @@ public class AnnonceListServlet extends BaseServlet {
             String authorParam, String categoryParam, String statusParam) {
         return ConditionalResolver.resolve(
                 () -> loadDefaultData(page),
-                new ConditionalResolver.Rule<>(() -> searchQuery != null, () -> loadSearchData(request, page, searchQuery)),
+                new ConditionalResolver.Rule<>(() -> searchQuery != null, () -> loadSearchData(request, page, searchQuery, categoryParam, statusParam)),
                 new ConditionalResolver.Rule<>(
                         () -> RequestParamUtils.hasValue(authorParam),
                         () -> loadAuthorData(request, page, authorParam)),
                 new ConditionalResolver.Rule<>(
-                        () -> RequestParamUtils.hasValue(categoryParam),
-                        () -> loadCategoryData(request, page, categoryParam)),
-                new ConditionalResolver.Rule<>(
-                        () -> RequestParamUtils.hasValue(statusParam),
-                        () -> loadStatusData(request, page, statusParam)));
+                        () -> RequestParamUtils.hasValue(categoryParam) || RequestParamUtils.hasValue(statusParam),
+                        () -> loadCategoryStatusData(request, page, categoryParam, statusParam)));
     }
 
-    private AnnonceListDTO loadSearchData(HttpServletRequest request, int page, String searchQuery) {
+    private AnnonceListDTO loadSearchData(
+            HttpServletRequest request, int page, String searchQuery, String categoryParam, String statusParam) {
+        Long categoryId = parseOptionalCategoryId(categoryParam);
+        AnnonceStatus status = parseOptionalStatus(statusParam);
+
         request.setAttribute("searchQuery", searchQuery);
+        if (categoryId != null) {
+            request.setAttribute("filterByCategory", true);
+            request.setAttribute("selectedCategory", categoryParam);
+        }
+        if (status != null) {
+            request.setAttribute("filterByStatus", true);
+            request.setAttribute("selectedStatus", statusParam);
+        }
+
         return new AnnonceListDTO(
-                annonceService.search(searchQuery, page, PAGE_SIZE),
-                annonceService.countByKeyword(searchQuery));
+                annonceService.searchByFilters(searchQuery, categoryId, status, page, PAGE_SIZE),
+                annonceService.countBySearchAndFilters(searchQuery, categoryId, status));
     }
 
     private AnnonceListDTO loadAuthorData(HttpServletRequest request, int page, String authorParam) {
@@ -100,26 +110,35 @@ public class AnnonceListServlet extends BaseServlet {
                 annonceService.countByAuthor(authorId));
     }
 
-    private AnnonceListDTO loadCategoryData(HttpServletRequest request, int page, String categoryParam) {
-        Long categoryId = Long.parseLong(categoryParam);
-        request.setAttribute("filterByCategory", true);
-        request.setAttribute("selectedCategory", categoryParam);
-        return new AnnonceListDTO(
-                annonceService.findByCategory(categoryId, page, PAGE_SIZE),
-                annonceService.countByCategory(categoryId));
-    }
+    private AnnonceListDTO loadCategoryStatusData(
+            HttpServletRequest request, int page, String categoryParam, String statusParam) {
+        Long categoryId = parseOptionalCategoryId(categoryParam);
+        AnnonceStatus status = parseOptionalStatus(statusParam);
 
-    private AnnonceListDTO loadStatusData(HttpServletRequest request, int page, String statusParam) {
-        AnnonceStatus status = AnnonceStatus.valueOf(statusParam);
-        request.setAttribute("filterByStatus", true);
-        request.setAttribute("selectedStatus", statusParam);
+        if (categoryId != null) {
+            request.setAttribute("filterByCategory", true);
+            request.setAttribute("selectedCategory", categoryParam);
+        }
+        if (status != null) {
+            request.setAttribute("filterByStatus", true);
+            request.setAttribute("selectedStatus", statusParam);
+        }
+
         return new AnnonceListDTO(
-                annonceService.findByStatus(status, page, PAGE_SIZE),
-                annonceService.countByStatus(status));
+                annonceService.findByFilters(categoryId, status, page, PAGE_SIZE),
+                annonceService.countByFilters(categoryId, status));
     }
 
     private AnnonceListDTO loadDefaultData(int page) {
         return new AnnonceListDTO(annonceService.findAll(page, PAGE_SIZE), annonceService.count());
+    }
+
+    private Long parseOptionalCategoryId(String categoryParam) {
+        return RequestParamUtils.hasValue(categoryParam) ? Long.parseLong(categoryParam) : null;
+    }
+
+    private AnnonceStatus parseOptionalStatus(String statusParam) {
+        return RequestParamUtils.hasValue(statusParam) ? AnnonceStatus.valueOf(statusParam) : null;
     }
 
 }

@@ -43,7 +43,7 @@ class AnnonceRepositoryTest {
         categoryRepository = new CategoryRepository();
         cleanDatabase();
         defaultAuthor = saveUser("defaultUser", "default@test.com");
-        defaultCategory = saveCategory("DefaultCategory");
+        defaultCategory = saveCategory();
     }
 
     @AfterEach
@@ -83,10 +83,10 @@ class AnnonceRepositoryTest {
         }
     }
 
-    private Category saveCategory(String label) {
+    private Category saveCategory() {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
-            Category category = new Category(label);
+            Category category = new Category("DefaultCategory");
             categoryRepository.save(em, category);
             em.getTransaction().commit();
             return category;
@@ -147,7 +147,7 @@ class AnnonceRepositoryTest {
         saveAnnonce("Titre 2", "Desc 2", "Addr 2", "mail2@test.com");
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
-            List<Annonce> all = repository.findAllWithRelations(em);
+            List<Annonce> all = repository.findByFilters(em, null, null, 0, 100);
             assertThat(all).hasSize(2);
         }
     }
@@ -159,8 +159,8 @@ class AnnonceRepositoryTest {
         }
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
-            List<Annonce> page0 = repository.findAllWithRelations(em, 0, 5);
-            List<Annonce> page1 = repository.findAllWithRelations(em, 1, 5);
+            List<Annonce> page0 = repository.findByFilters(em, null, null, 0, 5);
+            List<Annonce> page1 = repository.findByFilters(em, null, null, 1, 5);
             assertThat(page0).hasSize(5);
             assertThat(page1).hasSize(5);
         }
@@ -190,7 +190,7 @@ class AnnonceRepositoryTest {
     }
 
     @Test
-    void findByStatus_shouldFilterByStatus() {
+    void findByFilters_shouldFilterByStatus() {
         saveAnnonce("Draft", "Desc", "Addr", "mail@test.com");
         Annonce published = saveAnnonce("Published", "Desc", "Addr", "mail2@test.com");
 
@@ -201,8 +201,8 @@ class AnnonceRepositoryTest {
         }
 
         try (EntityManager em2 = JPAUtil.getEntityManager()) {
-            List<Annonce> drafts = repository.findByStatus(em2, AnnonceStatus.DRAFT, 0, 100);
-            List<Annonce> publishedList = repository.findByStatus(em2, AnnonceStatus.PUBLISHED, 0, 100);
+            List<Annonce> drafts = repository.findByFilters(em2, null, AnnonceStatus.DRAFT, 0, 100);
+            List<Annonce> publishedList = repository.findByFilters(em2, null, AnnonceStatus.PUBLISHED, 0, 100);
             assertThat(drafts).hasSize(1);
             assertThat(publishedList).hasSize(1);
         }
@@ -237,7 +237,7 @@ class AnnonceRepositoryTest {
     }
 
     @Test
-    void countByStatus_shouldReturnCorrectCount() {
+    void countByFilters_shouldReturnCorrectCount() {
         saveAnnonce("Draft 1", "Desc", "Addr", "mail@test.com");
         saveAnnonce("Draft 2", "Desc", "Addr", "mail2@test.com");
         Annonce published = saveAnnonce("Published", "Desc", "Addr", "mail3@test.com");
@@ -249,8 +249,8 @@ class AnnonceRepositoryTest {
         }
 
         try (EntityManager em2 = JPAUtil.getEntityManager()) {
-            long draftCount = repository.countByStatus(em2, AnnonceStatus.DRAFT);
-            long publishedCount = repository.countByStatus(em2, AnnonceStatus.PUBLISHED);
+            long draftCount = repository.countByFilters(em2, null, AnnonceStatus.DRAFT);
+            long publishedCount = repository.countByFilters(em2, null, AnnonceStatus.PUBLISHED);
             assertThat(draftCount).isEqualTo(2);
             assertThat(publishedCount).isEqualTo(1);
         }

@@ -6,7 +6,7 @@
 <c:if test="${not empty categories}">
     <div class="flex items-center gap-2">
         <label for="categoryFilter" class="text-sm font-medium text-zinc-700">Catégorie :</label>
-        <select id="categoryFilter" onchange="if(this.value){location.href='${pageContext.request.contextPath}/AnnonceList?category='+this.value}else{location.href='${pageContext.request.contextPath}/AnnonceList'}"
+        <select id="categoryFilter"
             class="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm">
             <option value="">Toutes</option>
             <c:forEach items="${categories}" var="cat">
@@ -17,3 +17,23 @@
         </select>
     </div>
 </c:if>
+
+<script>
+    (() => {
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (!categoryFilter) {
+            return;
+        }
+
+        categoryFilter.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('page');
+            if (categoryFilter.value) {
+                url.searchParams.set('category', categoryFilter.value);
+            } else {
+                url.searchParams.delete('category');
+            }
+            window.location.assign(url.toString());
+        });
+    })();
+</script>

@@ -30,11 +30,29 @@
     (() => {
         const input = document.getElementById('${uid}_input');
         const form = document.getElementById('${uid}_form');
+        const paramName = '${paramName}';
         let timer;
+
+        const navigateWithCurrentQuery = () => {
+            const url = new URL(window.location.href);
+            const value = input.value.trim();
+            url.searchParams.delete('page');
+            if (value.length > 0) {
+                url.searchParams.set(paramName, value);
+            } else {
+                url.searchParams.delete(paramName);
+            }
+            window.location.href = url.toString();
+        };
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            navigateWithCurrentQuery();
+        });
 
         input.addEventListener('input', () => {
             clearTimeout(timer);
-            timer = setTimeout(() => form.submit(), ${debounceMs});
+            timer = setTimeout(navigateWithCurrentQuery, ${debounceMs});
         });
 
         if (input.value.length > 0) {

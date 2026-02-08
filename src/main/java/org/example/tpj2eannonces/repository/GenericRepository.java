@@ -46,11 +46,8 @@ public abstract class GenericRepository<T, I> {
         return em.createQuery(jpql, Long.class).getSingleResult();
     }
 
-    public List<T> findAll(EntityManager em, int page, int size) {
-        String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e";
-        TypedQuery<T> query = em.createQuery(jpql, entityClass);
+    protected <Q> void applyPagination(TypedQuery<Q> query, int page, int size) {
         query.setFirstResult(page * size);
         query.setMaxResults(size);
-        return query.getResultList();
     }
 }

@@ -6,9 +6,6 @@ import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
-import org.example.tpj2eannonces.service.AnnonceService;
-import org.example.tpj2eannonces.service.CategoryService;
-import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,15 +15,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @WebServlet(name = "annoncePatchServlet", urlPatterns = "/AnnoncePatch")
-public class AnnoncePatchServlet extends BaseServlet {
+public class AnnoncePatchServlet extends AbstractAnnonceFormServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnoncePatchServlet.class);
     private static final String VIEW_UPDATE = "/WEB-INF/jsp/features/annonce/pages/update.jsp";
-    private static final String ATTR_ANNONCE = "annonce";
-    private static final String ATTR_CATEGORIES = "categories";
-    private static final String ATTR_SELECTED_CATEGORY = "selectedCategoryId";
-
-    private final transient AnnonceService annonceService = new AnnonceService();
-    private final transient CategoryService categoryService = new CategoryService();
 
     @Override
     protected Logger getLogger() {

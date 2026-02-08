@@ -1,5 +1,6 @@
 package org.example.tpj2eannonces.repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,13 +12,14 @@ import org.example.tpj2eannonces.model.User;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 
 public class AnnonceRepository extends GenericRepository<Annonce, Long> {
 
-    private static final String PARAM_STATUS = "status";
     private static final String PARAM_AUTHOR_ID = "authorId";
-    private static final String PARAM_KEYWORD = "keyword";
-    private static final String PARAM_CATEGORY_ID = "categoryId";
 
     public AnnonceRepository() {
         super(Annonce.class);
@@ -56,50 +58,19 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
     }
 
     public List<Annonce> searchByKeyword(EntityManager em, String keyword, int page, int size) {
-        String jpql = "SELECT a FROM Annonce a " +
-                "LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category " +
-                "WHERE LOWER(a.title) LIKE LOWER(:keyword) OR " +
-                "LOWER(a.description) LIKE LOWER(:keyword) " +
-                "ORDER BY a.date DESC";
-        TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-        query.setParameter(PARAM_KEYWORD, "%" + keyword + "%");
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
-        return query.getResultList();
+        return findByFilters(em, keyword, null, null, page, size);
     }
 
     public long countByKeyword(EntityManager em, String keyword) {
-        String jpql = "SELECT COUNT(a) FROM Annonce a " +
-                "WHERE LOWER(a.title) LIKE LOWER(:keyword) OR " +
-                "LOWER(a.description) LIKE LOWER(:keyword)";
-        return em.createQuery(jpql, Long.class)
-                .setParameter(PARAM_KEYWORD, "%" + keyword + "%")
-                .getSingleResult();
-    }
-
-    public List<Annonce> findByStatus(EntityManager em, AnnonceStatus status, int page, int size) {
-        String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.status = :status ORDER BY a.date DESC";
-        TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-        query.setParameter(PARAM_STATUS, status);
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
-        return query.getResultList();
+        return countByFilters(em, keyword, null, null);
     }
 
     public List<Annonce> findByAuthor(EntityManager em, UUID authorId, int page, int size) {
         String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.author.id = :authorId ORDER BY a.date DESC";
         TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
         query.setParameter(PARAM_AUTHOR_ID, authorId);
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
+        applyPagination(query, page, size);
         return query.getResultList();
-    }
-
-    public long countByStatus(EntityManager em, AnnonceStatus status) {
-        String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.status = :status";
-        return em.createQuery(jpql, Long.class)
-                .setParameter(PARAM_STATUS, status)
-                .getSingleResult();
     }
 
     public Optional<Annonce> findByIdWithRelations(EntityManager em, Long id) {
@@ -113,20 +84,61 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
                 .findFirst();
     }
 
-    public List<Annonce> findByCategory(EntityManager em, Long categoryId, int page, int size) {
-        String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.category.id = :categoryId ORDER BY a.date DESC";
-        TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-        query.setParameter(PARAM_CATEGORY_ID, categoryId);
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
+    public List<Annonce> findByFilters(EntityManager em, Long categoryId, AnnonceStatus status, int page, int size) {
+        return findByFilters(em, null, categoryId, status, page, size);
+    }
+
+    public List<Annonce> findByFilters(
+            EntityManager em, String keyword, Long categoryId, AnnonceStatus status, int page, int size) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Annonce> cq = cb.createQuery(Annonce.class);
+        Root<Annonce> root = cq.from(Annonce.class);
+        root.fetch("author");
+        root.fetch("category");
+
+        List<Predicate> predicates = new ArrayList<>(2);
+        addOptionalFilters(cb, root, predicates, keyword, categoryId, status);
+
+        cq.select(root)
+                .where(predicates.toArray(new Predicate[0]))
+                .orderBy(cb.desc(root.get("date")));
+
+        TypedQuery<Annonce> query = em.createQuery(cq);
+        applyPagination(query, page, size);
         return query.getResultList();
     }
 
-    public long countByCategory(EntityManager em, Long categoryId) {
-        String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :categoryId";
-        return em.createQuery(jpql, Long.class)
-                .setParameter(PARAM_CATEGORY_ID, categoryId)
-                .getSingleResult();
+    public long countByFilters(EntityManager em, Long categoryId, AnnonceStatus status) {
+        return countByFilters(em, null, categoryId, status);
+    }
+
+    public long countByFilters(EntityManager em, String keyword, Long categoryId, AnnonceStatus status) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<Annonce> root = cq.from(Annonce.class);
+
+        List<Predicate> predicates = new ArrayList<>(2);
+        addOptionalFilters(cb, root, predicates, keyword, categoryId, status);
+
+        cq.select(cb.count(root)).where(predicates.toArray(new Predicate[0]));
+        return em.createQuery(cq).getSingleResult();
+    }
+
+    private void addOptionalFilters(
+            CriteriaBuilder cb, Root<Annonce> root, List<Predicate> predicates,
+            String keyword, Long categoryId, AnnonceStatus status) {
+        if (keyword != null && !keyword.isBlank()) {
+            String pattern = "%" + keyword.toLowerCase() + "%";
+            predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("title")), pattern),
+                    cb.like(cb.lower(root.get("description")), pattern)));
+        }
+        if (categoryId != null) {
+            predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+        }
+        if (status != null) {
+            predicates.add(cb.equal(root.get("status"), status));
+        }
     }
 
     public long countByAuthor(EntityManager em, UUID authorId) {
@@ -134,18 +146,5 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
         return em.createQuery(jpql, Long.class)
                 .setParameter(PARAM_AUTHOR_ID, authorId)
                 .getSingleResult();
-    }
-
-    public List<Annonce> findAllWithRelations(EntityManager em) {
-        String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category ORDER BY a.date DESC";
-        return em.createQuery(jpql, Annonce.class).getResultList();
-    }
-
-    public List<Annonce> findAllWithRelations(EntityManager em, int page, int size) {
-        String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category ORDER BY a.date DESC";
-        TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
-        return query.getResultList();
     }
 }

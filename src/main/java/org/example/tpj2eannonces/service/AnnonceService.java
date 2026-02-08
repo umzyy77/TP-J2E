@@ -63,35 +63,27 @@ public class AnnonceService {
     }
 
     public List<Annonce> findAll(int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findAllWithRelations(em, page, size));
+        return findByFilters(null, null, page, size);
     }
 
     public List<Annonce> findAllPublished(int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findByStatus(em, AnnonceStatus.PUBLISHED, page, size));
+        return findByFilters(null, AnnonceStatus.PUBLISHED, page, size);
     }
 
     public List<Annonce> search(String keyword, int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.searchByKeyword(em, keyword, page, size));
+        return searchByFilters(keyword, null, null, page, size);
     }
 
     public long countByKeyword(String keyword) {
-        return JPAUtil.inReadOnly(em -> repository.countByKeyword(em, keyword));
+        return countBySearchAndFilters(keyword, null, null);
     }
 
     public long count() {
         return JPAUtil.inReadOnly(repository::count);
     }
 
-    public List<Annonce> findByStatus(AnnonceStatus status, int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findByStatus(em, status, page, size));
-    }
-
-    public long countByStatus(AnnonceStatus status) {
-        return JPAUtil.inReadOnly(em -> repository.countByStatus(em, status));
-    }
-
     public long countPublished() {
-        return JPAUtil.inReadOnly(em -> repository.countByStatus(em, AnnonceStatus.PUBLISHED));
+        return countByFilters(null, AnnonceStatus.PUBLISHED);
     }
 
     public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
@@ -102,11 +94,19 @@ public class AnnonceService {
         return JPAUtil.inReadOnly(em -> repository.countByAuthor(em, authorId));
     }
 
-    public List<Annonce> findByCategory(Long categoryId, int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findByCategory(em, categoryId, page, size));
+    public List<Annonce> findByFilters(Long categoryId, AnnonceStatus status, int page, int size) {
+        return searchByFilters(null, categoryId, status, page, size);
     }
 
-    public long countByCategory(Long categoryId) {
-        return JPAUtil.inReadOnly(em -> repository.countByCategory(em, categoryId));
+    public long countByFilters(Long categoryId, AnnonceStatus status) {
+        return countBySearchAndFilters(null, categoryId, status);
+    }
+
+    public List<Annonce> searchByFilters(String keyword, Long categoryId, AnnonceStatus status, int page, int size) {
+        return JPAUtil.inReadOnly(em -> repository.findByFilters(em, keyword, categoryId, status, page, size));
+    }
+
+    public long countBySearchAndFilters(String keyword, Long categoryId, AnnonceStatus status) {
+        return JPAUtil.inReadOnly(em -> repository.countByFilters(em, keyword, categoryId, status));
     }
 }
