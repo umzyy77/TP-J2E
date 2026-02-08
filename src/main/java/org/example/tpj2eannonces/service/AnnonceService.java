@@ -21,7 +21,7 @@ public class AnnonceService {
         this.repository = repository;
     }
 
-    public Annonce create(Annonce annonce, UUID authorId, UUID categoryId) {
+    public Annonce create(Annonce annonce, UUID authorId, Long categoryId) {
         return JPAUtil.inTransaction(em -> repository.saveWithRelations(em, annonce, authorId, categoryId));
     }
 
@@ -29,7 +29,7 @@ public class AnnonceService {
         return JPAUtil.inTransaction(em -> repository.update(em, annonce));
     }
 
-    public Annonce changeStatus(UUID annonceId, String action) {
+    public Annonce changeStatus(Long annonceId, String action) {
         return JPAUtil.inTransaction(em ->
             AnnonceStatus.getTargetStatusForAction(action)
                 .map(targetStatus -> repository.updateStatus(em, annonceId, targetStatus))
@@ -37,15 +37,15 @@ public class AnnonceService {
         );
     }
 
-    public boolean delete(UUID annonceId) {
+    public boolean delete(Long annonceId) {
         return JPAUtil.inTransaction(em -> repository.deleteById(em, annonceId));
     }
 
-    public Optional<Annonce> findById(UUID id) {
+    public Optional<Annonce> findById(Long id) {
         return JPAUtil.inReadOnly(em -> repository.findById(em, id));
     }
 
-    public Optional<Annonce> findByIdWithRelations(UUID id) {
+    public Optional<Annonce> findByIdWithRelations(Long id) {
         return JPAUtil.inReadOnly(em -> repository.findByIdWithRelations(em, id));
     }
 
@@ -89,11 +89,11 @@ public class AnnonceService {
         return JPAUtil.inReadOnly(em -> repository.countByAuthor(em, authorId));
     }
 
-    public List<Annonce> findByCategory(UUID categoryId, int page, int size) {
+    public List<Annonce> findByCategory(Long categoryId, int page, int size) {
         return JPAUtil.inReadOnly(em -> repository.findByCategory(em, categoryId, page, size));
     }
 
-    public long countByCategory(UUID categoryId) {
+    public long countByCategory(Long categoryId) {
         return JPAUtil.inReadOnly(em -> repository.countByCategory(em, categoryId));
     }
 }

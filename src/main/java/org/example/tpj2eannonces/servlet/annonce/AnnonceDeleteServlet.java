@@ -1,7 +1,5 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
-import java.util.UUID;
-
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
@@ -27,7 +25,7 @@ public class AnnonceDeleteServlet extends BaseServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) {
         try {
-            UUID id = ValidationUtils.validateId(request.getParameter("id"));
+            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
             boolean deleted = annonceService.delete(id);
             if (!deleted) {
                 forwardTo(request, response, VIEW_404);

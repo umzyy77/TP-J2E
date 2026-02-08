@@ -2,14 +2,13 @@ package org.example.tpj2eannonces.repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Category;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
-public class CategoryRepository extends GenericRepository<Category> {
+public class CategoryRepository extends GenericRepository<Category, Long> {
 
     public CategoryRepository() {
         super(Category.class);
@@ -35,7 +34,7 @@ public class CategoryRepository extends GenericRepository<Category> {
         return em.createQuery(jpql, Category.class).getResultList();
     }
 
-    public long countAnnoncesByCategory(EntityManager em, UUID categoryId) {
+    public long countAnnoncesByCategory(EntityManager em, Long categoryId) {
         String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :id";
         return em.createQuery(jpql, Long.class)
                 .setParameter("id", categoryId)

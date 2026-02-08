@@ -1,7 +1,6 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
@@ -37,7 +36,7 @@ public class AnnoncePatchServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
-            UUID id = ValidationUtils.validateId(request.getParameter("id"));
+            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
             Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
 
             if (annonceOpt.isEmpty()) {
@@ -66,7 +65,7 @@ public class AnnoncePatchServlet extends BaseServlet {
         String action = request.getParameter("action");
 
         try {
-            UUID id = ValidationUtils.validateId(request.getParameter("id"));
+            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
 
             if (AnnonceStatus.fromAction(action).isPresent()) {
                 annonceService.changeStatus(id, action);
@@ -89,7 +88,7 @@ public class AnnoncePatchServlet extends BaseServlet {
         }
     }
 
-    private void handleUpdate(HttpServletRequest request, HttpServletResponse response, UUID id) {
+    private void handleUpdate(HttpServletRequest request, HttpServletResponse response, Long id) {
         Annonce annonce = new Annonce();
         annonce.setId(id);
         String categoryIdParam = request.getParameter("categoryId");
@@ -113,7 +112,7 @@ public class AnnoncePatchServlet extends BaseServlet {
             existing.setMail(annonce.getMail());
 
             if (categoryIdParam != null && !categoryIdParam.isBlank()) {
-                UUID categoryId = UUID.fromString(categoryIdParam);
+                Long categoryId = ValidationUtils.validateLongId(categoryIdParam);
                 Optional<Category> catOpt = categoryService.findById(categoryId);
                 catOpt.ifPresent(existing::setCategory);
             } else {

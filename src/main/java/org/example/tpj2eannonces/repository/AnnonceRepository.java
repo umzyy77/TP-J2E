@@ -12,7 +12,7 @@ import org.example.tpj2eannonces.model.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
-public class AnnonceRepository extends GenericRepository<Annonce> {
+public class AnnonceRepository extends GenericRepository<Annonce, Long> {
 
     private static final String PARAM_STATUS = "status";
     private static final String PARAM_AUTHOR_ID = "authorId";
@@ -23,7 +23,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
         super(Annonce.class);
     }
 
-    public Annonce saveWithRelations(EntityManager em, Annonce annonce, UUID authorId, UUID categoryId) {
+    public Annonce saveWithRelations(EntityManager em, Annonce annonce, UUID authorId, Long categoryId) {
         if (authorId != null) {
             User author = em.find(User.class, authorId);
             if (author == null) {
@@ -44,7 +44,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
         return annonce;
     }
 
-    public Annonce updateStatus(EntityManager em, UUID annonceId, AnnonceStatus targetStatus) {
+    public Annonce updateStatus(EntityManager em, Long annonceId, AnnonceStatus targetStatus) {
         Annonce annonce = em.find(Annonce.class, annonceId);
         if (annonce == null) {
             throw new RepositoryException("Annonce non trouvée: " + annonceId);
@@ -100,7 +100,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
                 .getSingleResult();
     }
 
-    public Optional<Annonce> findByIdWithRelations(EntityManager em, UUID id) {
+    public Optional<Annonce> findByIdWithRelations(EntityManager em, Long id) {
         String jpql = "SELECT a FROM Annonce a " +
                 "LEFT JOIN FETCH a.author " +
                 "LEFT JOIN FETCH a.category " +
@@ -111,7 +111,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
                 .findFirst();
     }
 
-    public List<Annonce> findByCategory(EntityManager em, UUID categoryId, int page, int size) {
+    public List<Annonce> findByCategory(EntityManager em, Long categoryId, int page, int size) {
         String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.category.id = :categoryId ORDER BY a.date DESC";
         TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);
         query.setParameter(PARAM_CATEGORY_ID, categoryId);
@@ -120,7 +120,7 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
         return query.getResultList();
     }
 
-    public long countByCategory(EntityManager em, UUID categoryId) {
+    public long countByCategory(EntityManager em, Long categoryId) {
         String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :categoryId";
         return em.createQuery(jpql, Long.class)
                 .setParameter(PARAM_CATEGORY_ID, categoryId)

@@ -51,7 +51,7 @@ public class AnnonceListServlet extends BaseServlet {
                 totalCount = annonceService.countByAuthor(authorId);
                 request.setAttribute("filterByAuthor", true);
             } else if (categoryParam != null && !categoryParam.isEmpty()) {
-                UUID categoryId = UUID.fromString(categoryParam);
+                Long categoryId = Long.parseLong(categoryParam);
                 annonces = annonceService.findByCategory(categoryId, page, PAGE_SIZE);
                 totalCount = annonceService.countByCategory(categoryId);
                 request.setAttribute("filterByCategory", true);
@@ -92,7 +92,7 @@ public class AnnonceListServlet extends BaseServlet {
 
             forwardTo(request, response, VIEW_LIST);
         } catch (IllegalArgumentException _) {
-            handleDatabaseError(request, response, "ID auteur invalide");
+            handleDatabaseError(request, response, "Paramètre de filtre invalide");
         } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
         } catch (Exception e) {

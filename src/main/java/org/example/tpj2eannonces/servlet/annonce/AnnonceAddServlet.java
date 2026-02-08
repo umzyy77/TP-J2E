@@ -68,9 +68,9 @@ public class AnnonceAddServlet extends BaseServlet {
                 authorId = user.getId();
             }
 
-            UUID categoryId = null;
+            Long categoryId = null;
             if (categoryIdParam != null && !categoryIdParam.isBlank()) {
-                categoryId = UUID.fromString(categoryIdParam);
+                categoryId = ValidationUtils.validateLongId(categoryIdParam);
             }
 
             Annonce created = annonceService.create(annonce, authorId, categoryId);

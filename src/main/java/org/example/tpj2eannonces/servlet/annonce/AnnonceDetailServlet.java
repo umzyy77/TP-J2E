@@ -1,7 +1,6 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
@@ -30,7 +29,7 @@ public class AnnonceDetailServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
-            UUID id = ValidationUtils.validateId(request.getParameter("id"));
+            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
             Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
 
             if (annonceOpt.isEmpty()) {

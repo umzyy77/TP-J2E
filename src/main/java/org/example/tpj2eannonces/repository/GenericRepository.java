@@ -2,12 +2,11 @@ package org.example.tpj2eannonces.repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
-public abstract class GenericRepository<T> {
+public abstract class GenericRepository<T, ID> {
 
     private final Class<T> entityClass;
 
@@ -24,7 +23,7 @@ public abstract class GenericRepository<T> {
         return em.merge(entity);
     }
 
-    public boolean deleteById(EntityManager em, UUID id) {
+    public boolean deleteById(EntityManager em, ID id) {
         T entity = em.find(entityClass, id);
         if (entity != null) {
             em.remove(entity);
@@ -33,7 +32,7 @@ public abstract class GenericRepository<T> {
         return false;
     }
 
-    public Optional<T> findById(EntityManager em, UUID id) {
+    public Optional<T> findById(EntityManager em, ID id) {
         return Optional.ofNullable(em.find(entityClass, id));
     }
 

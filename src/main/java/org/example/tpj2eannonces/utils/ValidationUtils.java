@@ -62,7 +62,23 @@ public final class ValidationUtils {
         return value;
     }
 
-    public static UUID validateId(String idValue) {
+    public static Long validateLongId(String idValue) {
+        String value = normalize(idValue);
+        if (value.isEmpty()) {
+            throw new ValidationException("Identifiant manquant");
+        }
+        try {
+            long id = Long.parseLong(value);
+            if (id <= 0) {
+                throw new ValidationException("Identifiant invalide");
+            }
+            return id;
+        } catch (NumberFormatException _) {
+            throw new ValidationException("Identifiant invalide");
+        }
+    }
+
+    public static UUID validateUuidId(String idValue) {
         String value = normalize(idValue);
         if (value.isEmpty()) {
             throw new ValidationException("Identifiant manquant");
@@ -72,6 +88,10 @@ public final class ValidationUtils {
         } catch (IllegalArgumentException _) {
             throw new ValidationException("Identifiant invalide");
         }
+    }
+
+    public static UUID validateId(String idValue) {
+        return validateUuidId(idValue);
     }
 
     private static String normalize(String value) {

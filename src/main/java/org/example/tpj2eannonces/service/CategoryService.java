@@ -2,7 +2,6 @@ package org.example.tpj2eannonces.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.repository.CategoryRepository;
@@ -33,7 +32,7 @@ public class CategoryService {
         return JPAUtil.inTransaction(em -> repository.update(em, category));
     }
 
-    public boolean delete(UUID categoryId) {
+    public boolean delete(Long categoryId) {
         return JPAUtil.inTransaction(em -> {
             long count = repository.countAnnoncesByCategory(em, categoryId);
             if (count > 0) {
@@ -44,7 +43,7 @@ public class CategoryService {
     }
 
 
-    public Optional<Category> findById(UUID id) {
+    public Optional<Category> findById(Long id) {
         return JPAUtil.inReadOnly(em -> repository.findById(em, id));
     }
 

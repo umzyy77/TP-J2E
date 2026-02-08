@@ -2,13 +2,14 @@ package org.example.tpj2eannonces.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.example.tpj2eannonces.model.User;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
-public class UserRepository extends GenericRepository<User> {
+public class UserRepository extends GenericRepository<User, UUID> {
 
     private static final String PARAM_USERNAME = "username";
     private static final String PARAM_EMAIL = "email";
