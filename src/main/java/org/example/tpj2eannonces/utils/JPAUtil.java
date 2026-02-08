@@ -11,7 +11,8 @@ import jakarta.persistence.Persistence;
 
 public final class JPAUtil {
     private static final Logger logger = LoggerFactory.getLogger(JPAUtil.class);
-    private static final String PERSISTENCE_UNIT_NAME = "MasterAnnoncePU";
+    private static final String DEFAULT_PERSISTENCE_UNIT_NAME = "MasterAnnoncePU";
+    private static final String PERSISTENCE_UNIT_PROPERTY = "tpj2e.persistence.unit";
 
     private static EntityManagerFactory entityManagerFactory;
 
@@ -20,11 +21,16 @@ public final class JPAUtil {
 
     public static synchronized EntityManagerFactory getEntityManagerFactory() {
         if (entityManagerFactory == null || !entityManagerFactory.isOpen()) {
+            String persistenceUnitName = resolvePersistenceUnitName();
             logger.info("Initialisation de l'EntityManagerFactory...");
-            entityManagerFactory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
-            logger.info("EntityManagerFactory initialisé avec succès.");
+            entityManagerFactory = Persistence.createEntityManagerFactory(persistenceUnitName);
+            logger.info("EntityManagerFactory initialise avec succes.");
         }
         return entityManagerFactory;
+    }
+
+    private static String resolvePersistenceUnitName() {
+        return System.getProperty(PERSISTENCE_UNIT_PROPERTY, DEFAULT_PERSISTENCE_UNIT_NAME);
     }
 
     public static EntityManager getEntityManager() {
@@ -59,7 +65,7 @@ public final class JPAUtil {
             logger.info("Fermeture de l'EntityManagerFactory...");
             entityManagerFactory.close();
             entityManagerFactory = null;
-            logger.info("EntityManagerFactory fermé.");
+            logger.info("EntityManagerFactory ferme.");
         }
     }
 }

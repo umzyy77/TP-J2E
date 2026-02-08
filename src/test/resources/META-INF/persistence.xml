@@ -5,7 +5,7 @@
              https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
              version="3.0">
 
-    <persistence-unit name="MasterAnnoncePU" transaction-type="RESOURCE_LOCAL">
+    <persistence-unit name="MasterAnnonceTestPU" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
         <!-- Entités JPA -->
@@ -19,9 +19,6 @@
             <property name="jakarta.persistence.jdbc.url" value="jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1"/>
             <property name="jakarta.persistence.jdbc.user" value="sa"/>
             <property name="jakarta.persistence.jdbc.password" value=""/>
-
-            <!-- Hibernate settings -->
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
 
             <!-- Show SQL in console -->
             <property name="hibernate.show_sql" value="true"/>

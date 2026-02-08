@@ -42,6 +42,10 @@ La configuration JPA se trouve dans `src/main/resources/META-INF/persistence.xml
 
 Les tests utilisent une base H2 en mémoire configurée dans `src/test/resources/META-INF/persistence.xml` avec `hbm2ddl.auto=create-drop`.
 
+- **Persistence Unit de test** : `MasterAnnonceTestPU`
+- **Sélection de la PU en test** : via la propriété Maven Surefire `tpj2e.persistence.unit`
+- **Configuration de logs test** : `src/test/resources/logging.properties` (sortie `mvn verify` sans warnings Hibernate parasites)
+
 ## Lancement en local
 
 ### Option 1 : Docker Compose (base de données)
@@ -84,7 +88,7 @@ Accès : `http://localhost:8080/MasterAnnonce/`
 ```
 src/main/java/org/example/tpj2eannonces/
 ├── config/          # AppContextListener (init/destroy EntityManagerFactory)
-├── exception/       # DatabaseException, ValidationException
+├── exception/       # ValidationException
 ├── filter/          # AuthenticationFilter, EncodingFilter
 ├── model/           # Entités JPA (User, Category, Annonce, AnnonceStatus)
 ├── repository/      # Couche persistence JPQL (+ RepositoryException)
@@ -119,7 +123,7 @@ src/main/java/org/example/tpj2eannonces/
 | Tomcat Embed | 10.1.50 | Serveur embarqué |
 | JUnit 5 | 5.11.0 | Tests |
 | Mockito | 5.14.2 | Mocks |
-| AssertJ | 3.27.3 | Assertions fluides |
+| AssertJ | 3.27.7 | Assertions fluides |
 | H2 | 2.3.232 | Base de tests |
 | JaCoCo | 0.8.14 | Couverture de code |
 
@@ -205,7 +209,6 @@ DRAFT --[publish]--> PUBLISHED --[archive]--> ARCHIVED
 | Exception | Package | Usage |
 |-----------|---------|-------|
 | `ValidationException` | exception | Erreurs de validation (entrées utilisateur) |
-| `DatabaseException` | exception | Erreurs base de données |
 | `ServiceException` | service | Erreurs métier (doublons, contraintes) |
 | `RepositoryException` | repository | Erreurs d'accès aux données (entité introuvable) |
 
@@ -274,6 +277,9 @@ mvn clean compile
 # Lancer les tests
 mvn test
 
+# Vérification complète (tests + packaging)
+mvn verify
+
 # Créer le WAR
 mvn package -DskipTests
 
@@ -330,6 +336,16 @@ mvn sonar:sonar
 
 **Solution** : Vérification dans `CategoryService.delete()` du nombre d'annonces liées avant suppression, avec message d'erreur explicite.
 
+### 6. Warnings Hibernate pendant les tests
+
+**Problème** : Warnings de configuration Hibernate pendant `mvn test` / `mvn verify` (PU dupliquée et dialect H2 explicite).
+
+**Solution** :
+- PU dédiée aux tests (`MasterAnnonceTestPU`) dans `src/test/resources/META-INF/persistence.xml`
+- Propriété `tpj2e.persistence.unit` injectée par Surefire
+- Suppression du `hibernate.dialect` explicite côté tests
+- Fichier `src/test/resources/logging.properties` pour limiter les logs de warning non utiles
+
 ## Structure complète du projet
 
 ```
@@ -343,7 +359,6 @@ TP-J2E/
 │   │   │   ├── config/
 │   │   │   │   └── AppContextListener.java
 │   │   │   ├── exception/
-│   │   │   │   ├── DatabaseException.java
 │   │   │   │   └── ValidationException.java
 │   │   │   ├── filter/
 │   │   │   │   ├── AuthenticationFilter.java
