@@ -7,7 +7,7 @@
                     <div class="space-y-4">
                         <div
                             class="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 shadow-sm">
-                            Jakarta Servlet / JSP / JDBC
+                            Jakarta Servlet / JSP / JPA
                         </div>
                         <h1 class="text-4xl font-bold tracking-tight sm:text-5xl">
                             Gérez vos annonces<br>simplement
@@ -39,7 +39,7 @@
                             </li>
                             <li class="flex items-center gap-2">
                                 <span class="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
-                                PostgreSQL + JDBC
+                                PostgreSQL + Hibernate
                             </li>
                         </ul>
                     </div>

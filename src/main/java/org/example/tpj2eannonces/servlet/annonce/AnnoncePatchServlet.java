@@ -1,7 +1,6 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
@@ -37,21 +36,10 @@ public class AnnoncePatchServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
-            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
-            Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
-
-            if (annonceOpt.isEmpty()) {
-                forwardTo(request, response, VIEW_404);
-                return;
-            }
+            Optional<Annonce> annonceOpt = requireOwnedResource(request, response, ValidationUtils::validateLongId, annonceService::findByIdWithRelations);
+            if (annonceOpt.isEmpty()) return;
 
             Annonce annonce = annonceOpt.get();
-            UUID loggedUserId = requireLoggedUserId(request);
-            if (isOwnedBy(annonce, loggedUserId)) {
-                sendForbidden(response);
-                return;
-            }
-
             request.setAttribute(ATTR_ANNONCE, annonce);
             request.setAttribute(ATTR_CATEGORIES, categoryService.findAll());
             if (annonce.getCategory() != null) {
@@ -72,19 +60,11 @@ public class AnnoncePatchServlet extends BaseServlet {
         String action = request.getParameter("action");
 
         try {
-            Long id = ValidationUtils.validateLongId(request.getParameter("id"));
-            UUID loggedUserId = requireLoggedUserId(request);
-            Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
-            if (annonceOpt.isEmpty()) {
-                forwardTo(request, response, VIEW_404);
-                return;
-            }
+            Optional<Annonce> annonceOpt = requireOwnedResource(request, response, ValidationUtils::validateLongId, annonceService::findByIdWithRelations);
+            if (annonceOpt.isEmpty()) return;
 
             Annonce existing = annonceOpt.get();
-            if (isOwnedBy(existing, loggedUserId)) {
-                sendForbidden(response);
-                return;
-            }
+            Long id = existing.getId();
 
             if (AnnonceStatus.fromAction(action).isPresent()) {
                 annonceService.changeStatus(id, action);

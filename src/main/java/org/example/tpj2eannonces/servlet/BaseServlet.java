@@ -1,7 +1,9 @@
 package org.example.tpj2eannonces.servlet;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.OwnableByUser;
@@ -66,12 +68,30 @@ public abstract class BaseServlet extends HttpServlet {
         return user.getId();
     }
 
-    protected <T extends OwnableByUser> boolean isOwnedBy(T resource, UUID loggedUserId) {
+    protected <T extends OwnableByUser> boolean isNotOwnedBy(T resource, UUID loggedUserId) {
         if (resource == null || loggedUserId == null) {
             return true;
         }
         UUID ownerId = resource.getOwnerId();
         return ownerId == null || !ownerId.equals(loggedUserId);
+    }
+
+    protected <T extends OwnableByUser, ID> Optional<T> requireOwnedResource(
+            HttpServletRequest request, HttpServletResponse response,
+            Function<String, ID> idValidator,
+            Function<ID, Optional<T>> finder) {
+        ID id = idValidator.apply(request.getParameter("id"));
+        UUID loggedUserId = requireLoggedUserId(request);
+        Optional<T> resourceOpt = finder.apply(id);
+        if (resourceOpt.isEmpty()) {
+            forwardTo(request, response, VIEW_404);
+            return Optional.empty();
+        }
+        if (isNotOwnedBy(resourceOpt.get(), loggedUserId)) {
+            sendForbidden(response);
+            return Optional.empty();
+        }
+        return resourceOpt;
     }
 
     protected void sendForbidden(HttpServletResponse response) {

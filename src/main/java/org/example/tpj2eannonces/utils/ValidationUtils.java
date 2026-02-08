@@ -2,7 +2,7 @@ package org.example.tpj2eannonces.utils;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 
-import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class ValidationUtils {
@@ -62,36 +62,24 @@ public final class ValidationUtils {
         return value;
     }
 
+    public static <ID> ID validateId(String idValue, Function<String, ID> parser) {
+        String value = normalize(idValue);
+        if (value.isEmpty()) {
+            throw new ValidationException("Identifiant manquant");
+        }
+        try {
+            return parser.apply(value);
+        } catch (Exception _) {
+            throw new ValidationException("Identifiant invalide");
+        }
+    }
+
     public static Long validateLongId(String idValue) {
-        String value = normalize(idValue);
-        if (value.isEmpty()) {
-            throw new ValidationException("Identifiant manquant");
-        }
-        try {
-            long id = Long.parseLong(value);
-            if (id <= 0) {
-                throw new ValidationException("Identifiant invalide");
-            }
-            return id;
-        } catch (NumberFormatException _) {
+        Long id = validateId(idValue, Long::parseLong);
+        if (id <= 0) {
             throw new ValidationException("Identifiant invalide");
         }
-    }
-
-    public static UUID validateUuidId(String idValue) {
-        String value = normalize(idValue);
-        if (value.isEmpty()) {
-            throw new ValidationException("Identifiant manquant");
-        }
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException _) {
-            throw new ValidationException("Identifiant invalide");
-        }
-    }
-
-    public static UUID validateId(String idValue) {
-        return validateUuidId(idValue);
+        return id;
     }
 
     private static String normalize(String value) {
