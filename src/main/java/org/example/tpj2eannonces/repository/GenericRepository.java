@@ -6,7 +6,7 @@ import java.util.Optional;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
-public abstract class GenericRepository<T, ID> {
+public abstract class GenericRepository<T, I> {
 
     private final Class<T> entityClass;
 
@@ -23,7 +23,7 @@ public abstract class GenericRepository<T, ID> {
         return em.merge(entity);
     }
 
-    public boolean deleteById(EntityManager em, ID id) {
+    public boolean deleteById(EntityManager em, I id) {
         T entity = em.find(entityClass, id);
         if (entity != null) {
             em.remove(entity);
@@ -32,7 +32,7 @@ public abstract class GenericRepository<T, ID> {
         return false;
     }
 
-    public Optional<T> findById(EntityManager em, ID id) {
+    public Optional<T> findById(EntityManager em, I id) {
         return Optional.ofNullable(em.find(entityClass, id));
     }
 

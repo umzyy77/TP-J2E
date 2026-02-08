@@ -62,7 +62,7 @@ public final class ValidationUtils {
         return value;
     }
 
-    public static <ID> ID validateId(String idValue, Function<String, ID> parser) {
+    public static <I> I validateId(String idValue, Function<String, I> parser) {
         String value = normalize(idValue);
         if (value.isEmpty()) {
             throw new ValidationException("Identifiant manquant");

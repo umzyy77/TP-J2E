@@ -76,11 +76,11 @@ public abstract class BaseServlet extends HttpServlet {
         return ownerId == null || !ownerId.equals(loggedUserId);
     }
 
-    protected <T extends OwnableByUser, ID> Optional<T> requireOwnedResource(
+    protected <T extends OwnableByUser, I> Optional<T> requireOwnedResource(
             HttpServletRequest request, HttpServletResponse response,
-            Function<String, ID> idValidator,
-            Function<ID, Optional<T>> finder) {
-        ID id = idValidator.apply(request.getParameter("id"));
+            Function<String, I> idValidator,
+            Function<I, Optional<T>> finder) {
+        I id = idValidator.apply(request.getParameter("id"));
         UUID loggedUserId = requireLoggedUserId(request);
         Optional<T> resourceOpt = finder.apply(id);
         if (resourceOpt.isEmpty()) {

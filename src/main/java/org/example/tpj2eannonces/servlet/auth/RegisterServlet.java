@@ -4,6 +4,7 @@ import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.UserService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
+import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,27 +66,12 @@ public class RegisterServlet extends BaseServlet {
         if (username.length() < 3 || username.length() > 50) {
             throw new ValidationException("Le nom d'utilisateur doit contenir entre 3 et 50 caractères.");
         }
-        if (email == null || email.isBlank()) {
-            throw new ValidationException("L'email est obligatoire.");
-        }
-        if (!isValidEmail(email)) {
-            throw new ValidationException("L'email n'est pas valide.");
-        }
+        ValidationUtils.validateEmail(email);
         if (password == null || password.length() < 6) {
             throw new ValidationException("Le mot de passe doit contenir au moins 6 caractères.");
         }
         if (!password.equals(confirmPassword)) {
             throw new ValidationException("Les mots de passe ne correspondent pas.");
         }
-    }
-
-    private boolean isValidEmail(String email) {
-        // Validation simple sans regex récursive
-        if (email == null || email.length() > 254) {
-            return false;
-        }
-        int atIndex = email.indexOf('@');
-        int dotIndex = email.lastIndexOf('.');
-        return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length() - 1;
     }
 }
