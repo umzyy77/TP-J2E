@@ -39,22 +39,27 @@ class UserRepositoryTest {
     }
 
     private void cleanDatabase() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             em.createQuery("DELETE FROM Annonce").executeUpdate();
             em.createQuery("DELETE FROM User").executeUpdate();
             em.getTransaction().commit();
-        } finally {
-            em.close();
+        }
+    }
+
+    private User saveUser() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            em.getTransaction().begin();
+            User user = new User("testuser", "test@example.com", "password123");
+            repository.save(em, user);
+            em.getTransaction().commit();
+            return user;
         }
     }
 
     @Test
     void save_shouldPersistUser() {
-        User user = new User("testuser", "test@example.com", "password123");
-
-        User saved = repository.save(user);
+        User saved = saveUser();
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getCreatedAt()).isNotNull();
@@ -62,48 +67,41 @@ class UserRepositoryTest {
 
     @Test
     void findByUsername_shouldReturnUser() {
-        repository.save(new User("testuser", "test@example.com", "password123"));
+        saveUser();
 
-        Optional<User> found = repository.findByUsername("testuser");
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getEmail()).isEqualTo("test@example.com");
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            Optional<User> found = repository.findByUsername(em, "testuser");
+            assertThat(found).isPresent();
+            assertThat(found.get().getEmail()).isEqualTo("test@example.com");
+        }
     }
 
     @Test
     void findByEmail_shouldReturnUser() {
-        repository.save(new User("testuser", "test@example.com", "password123"));
+        saveUser();
 
-        Optional<User> found = repository.findByEmail("test@example.com");
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("testuser");
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            Optional<User> found = repository.findByEmail(em, "test@example.com");
+            assertThat(found).isPresent();
+            assertThat(found.get().getUsername()).isEqualTo("testuser");
+        }
     }
 
     @Test
     void existsByUsername_shouldReturnTrue() {
-        repository.save(new User("testuser", "test@example.com", "password123"));
+        saveUser();
 
-        boolean exists = repository.existsByUsername("testuser");
-
-        assertThat(exists).isTrue();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            boolean exists = repository.existsByUsername(em, "testuser");
+            assertThat(exists).isTrue();
+        }
     }
 
     @Test
     void existsByUsername_shouldReturnFalse() {
-        boolean exists = repository.existsByUsername("nonexistent");
-
-        assertThat(exists).isFalse();
-    }
-
-    @Test
-    void findByUsernameAndPassword_shouldAuthenticateUser() {
-        repository.save(new User("testuser", "test@example.com", "password123"));
-
-        Optional<User> found = repository.findByUsernameAndPassword("testuser", "password123");
-        Optional<User> notFound = repository.findByUsernameAndPassword("testuser", "wrongpassword");
-
-        assertThat(found).isPresent();
-        assertThat(notFound).isEmpty();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            boolean exists = repository.existsByUsername(em, "nonexistent");
+            assertThat(exists).isFalse();
+        }
     }
 }

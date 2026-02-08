@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.repository.CategoryRepository;
+import org.example.tpj2eannonces.utils.JPAUtil;
 
 public class CategoryService {
 
@@ -20,33 +21,38 @@ public class CategoryService {
     }
 
     public Category create(Category category) {
-        if (repository.existsByLabel(category.getLabel())) {
-            throw new ServiceException("La catégorie existe déjà: " + category.getLabel());
-        }
-        return repository.save(category);
+        return JPAUtil.inTransaction(em -> {
+            if (repository.existsByLabel(em, category.getLabel())) {
+                throw new ServiceException("La catégorie existe déjà: " + category.getLabel());
+            }
+            return repository.save(em, category);
+        });
     }
 
     public Category update(Category category) {
-        return repository.update(category);
+        return JPAUtil.inTransaction(em -> repository.update(em, category));
     }
 
     public boolean delete(UUID categoryId) {
-        long count = repository.countAnnoncesByCategory(categoryId);
-        if (count > 0) {
-            throw new ServiceException("Impossible de supprimer: " + count + " annonce(s) liée(s)");
-        }
-        return repository.deleteById(categoryId);
+        return JPAUtil.inTransaction(em -> {
+            long count = repository.countAnnoncesByCategory(em, categoryId);
+            if (count > 0) {
+                throw new ServiceException("Impossible de supprimer: " + count + " annonce(s) liée(s)");
+            }
+            return repository.deleteById(em, categoryId);
+        });
     }
 
+
     public Optional<Category> findById(UUID id) {
-        return repository.findById(id);
+        return JPAUtil.inReadOnly(em -> repository.findById(em, id));
     }
 
     public Optional<Category> findByLabel(String label) {
-        return repository.findByLabel(label);
+        return JPAUtil.inReadOnly(em -> repository.findByLabel(em, label));
     }
 
     public List<Category> findAll() {
-        return repository.findAllOrderByLabel();
+        return JPAUtil.inReadOnly(repository::findAllOrderByLabel);
     }
 }

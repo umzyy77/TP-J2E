@@ -1,5 +1,7 @@
 package org.example.tpj2eannonces.utils;
 
+import java.util.function.Function;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +29,29 @@ public final class JPAUtil {
 
     public static EntityManager getEntityManager() {
         return getEntityManagerFactory().createEntityManager();
+    }
+
+    public static <T> T inTransaction(Function<EntityManager, T> action) {
+        EntityManager em = getEntityManager();
+        try {
+            em.getTransaction().begin();
+            T result = action.apply(em);
+            em.getTransaction().commit();
+            return result;
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static <T> T inReadOnly(Function<EntityManager, T> action) {
+        try (EntityManager em = getEntityManager()) {
+            return action.apply(em);
+        }
     }
 
     public static synchronized void close() {

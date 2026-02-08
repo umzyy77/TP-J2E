@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.repository.AnnonceRepository;
+import org.example.tpj2eannonces.utils.JPAUtil;
 
 public class AnnonceService {
 
@@ -21,72 +22,74 @@ public class AnnonceService {
     }
 
     public Annonce create(Annonce annonce, UUID authorId, UUID categoryId) {
-        return repository.saveWithRelations(annonce, authorId, categoryId);
+        return JPAUtil.inTransaction(em -> repository.saveWithRelations(em, annonce, authorId, categoryId));
     }
 
     public Annonce update(Annonce annonce) {
-        return repository.update(annonce);
+        return JPAUtil.inTransaction(em -> repository.update(em, annonce));
     }
 
     public Annonce changeStatus(UUID annonceId, String action) {
-        return AnnonceStatus.getTargetStatusForAction(action)
-            .map(targetStatus -> repository.updateStatus(annonceId, targetStatus))
-            .orElseThrow(() -> new ServiceException("Action inconnue: " + action));
+        return JPAUtil.inTransaction(em ->
+            AnnonceStatus.getTargetStatusForAction(action)
+                .map(targetStatus -> repository.updateStatus(em, annonceId, targetStatus))
+                .orElseThrow(() -> new ServiceException("Action inconnue: " + action))
+        );
     }
 
     public boolean delete(UUID annonceId) {
-        return repository.deleteById(annonceId);
+        return JPAUtil.inTransaction(em -> repository.deleteById(em, annonceId));
     }
 
     public Optional<Annonce> findById(UUID id) {
-        return repository.findById(id);
+        return JPAUtil.inReadOnly(em -> repository.findById(em, id));
     }
 
     public Optional<Annonce> findByIdWithRelations(UUID id) {
-        return repository.findByIdWithRelations(id);
+        return JPAUtil.inReadOnly(em -> repository.findByIdWithRelations(em, id));
     }
 
     public List<Annonce> findAll(int page, int size) {
-        return repository.findAll(page, size);
+        return JPAUtil.inReadOnly(em -> repository.findAllWithRelations(em, page, size));
     }
 
     public List<Annonce> findAllPublished(int page, int size) {
-        return repository.findByStatus(AnnonceStatus.PUBLISHED, page, size);
+        return JPAUtil.inReadOnly(em -> repository.findByStatus(em, AnnonceStatus.PUBLISHED, page, size));
     }
 
     public List<Annonce> search(String keyword, int page, int size) {
-        return repository.searchByKeyword(keyword, page, size);
+        return JPAUtil.inReadOnly(em -> repository.searchByKeyword(em, keyword, page, size));
     }
 
     public long count() {
-        return repository.count();
+        return JPAUtil.inReadOnly(repository::count);
     }
 
     public List<Annonce> findByStatus(AnnonceStatus status, int page, int size) {
-        return repository.findByStatus(status, page, size);
+        return JPAUtil.inReadOnly(em -> repository.findByStatus(em, status, page, size));
     }
 
     public long countByStatus(AnnonceStatus status) {
-        return repository.countByStatus(status);
+        return JPAUtil.inReadOnly(em -> repository.countByStatus(em, status));
     }
 
     public long countPublished() {
-        return repository.countByStatus(AnnonceStatus.PUBLISHED);
+        return JPAUtil.inReadOnly(em -> repository.countByStatus(em, AnnonceStatus.PUBLISHED));
     }
 
     public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
-        return repository.findByAuthor(authorId, page, size);
+        return JPAUtil.inReadOnly(em -> repository.findByAuthor(em, authorId, page, size));
     }
 
     public long countByAuthor(UUID authorId) {
-        return repository.countByAuthor(authorId);
+        return JPAUtil.inReadOnly(em -> repository.countByAuthor(em, authorId));
     }
 
     public List<Annonce> findByCategory(UUID categoryId, int page, int size) {
-        return repository.findByCategory(categoryId, page, size);
+        return JPAUtil.inReadOnly(em -> repository.findByCategory(em, categoryId, page, size));
     }
 
     public long countByCategory(UUID categoryId) {
-        return repository.countByCategory(categoryId);
+        return JPAUtil.inReadOnly(em -> repository.countByCategory(em, categoryId));
     }
 }

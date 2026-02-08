@@ -15,38 +15,30 @@ public class CategoryRepository extends GenericRepository<Category> {
         super(Category.class);
     }
 
-    public Optional<Category> findByLabel(String label) {
-        try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT c FROM Category c WHERE c.label = :label";
-            TypedQuery<Category> query = em.createQuery(jpql, Category.class);
-            query.setParameter("label", label);
-            return query.getResultStream().findFirst();
-        }
+    public Optional<Category> findByLabel(EntityManager em, String label) {
+        String jpql = "SELECT c FROM Category c WHERE c.label = :label";
+        TypedQuery<Category> query = em.createQuery(jpql, Category.class);
+        query.setParameter("label", label);
+        return query.getResultStream().findFirst();
     }
 
-    public boolean existsByLabel(String label) {
-        try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT COUNT(c) FROM Category c WHERE c.label = :label";
-            Long count = em.createQuery(jpql, Long.class)
-                    .setParameter("label", label)
-                    .getSingleResult();
-            return count > 0;
-        }
+    public boolean existsByLabel(EntityManager em, String label) {
+        String jpql = "SELECT COUNT(c) FROM Category c WHERE c.label = :label";
+        Long count = em.createQuery(jpql, Long.class)
+                .setParameter("label", label)
+                .getSingleResult();
+        return count > 0;
     }
 
-    public List<Category> findAllOrderByLabel() {
-        try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT c FROM Category c ORDER BY c.label";
-            return em.createQuery(jpql, Category.class).getResultList();
-        }
+    public List<Category> findAllOrderByLabel(EntityManager em) {
+        String jpql = "SELECT c FROM Category c ORDER BY c.label";
+        return em.createQuery(jpql, Category.class).getResultList();
     }
 
-    public long countAnnoncesByCategory(UUID categoryId) {
-        try (EntityManager em = getEntityManager()) {
-            String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :id";
-            return em.createQuery(jpql, Long.class)
-                    .setParameter("id", categoryId)
-                    .getSingleResult();
-        }
+    public long countAnnoncesByCategory(EntityManager em, UUID categoryId) {
+        String jpql = "SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :id";
+        return em.createQuery(jpql, Long.class)
+                .setParameter("id", categoryId)
+                .getSingleResult();
     }
 }
