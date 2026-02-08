@@ -30,11 +30,24 @@ public class AnnonceService {
     }
 
     public Annonce changeStatus(Long annonceId, String action) {
-        return JPAUtil.inTransaction(em ->
-            AnnonceStatus.getTargetStatusForAction(action)
-                .map(targetStatus -> repository.updateStatus(em, annonceId, targetStatus))
-                .orElseThrow(() -> new ServiceException("Action inconnue: " + action))
-        );
+        return JPAUtil.inTransaction(em -> {
+            Annonce annonce = repository.findById(em, annonceId)
+                    .orElseThrow(() -> new ServiceException("Annonce non trouvee: " + annonceId));
+
+            AnnonceStatus expectedCurrentStatus = AnnonceStatus.fromAction(action)
+                    .orElseThrow(() -> new ServiceException("Action inconnue: " + action));
+
+            if (annonce.getStatus() != expectedCurrentStatus) {
+                throw new ServiceException("Transition invalide depuis " + annonce.getStatus() + " avec action " + action);
+            }
+
+            AnnonceStatus targetStatus = expectedCurrentStatus.getNextStatus();
+            if (targetStatus == null) {
+                throw new ServiceException("Aucun statut cible pour l'action: " + action);
+            }
+
+            return repository.updateStatus(em, annonceId, targetStatus);
+        });
     }
 
     public boolean delete(Long annonceId) {

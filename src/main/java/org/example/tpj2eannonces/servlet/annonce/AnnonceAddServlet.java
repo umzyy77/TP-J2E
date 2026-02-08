@@ -62,16 +62,13 @@ public class AnnonceAddServlet extends BaseServlet {
             annonce.setMail(ValidationUtils.validateEmail(annonce.getMail()));
 
             HttpSession session = request.getSession(false);
-            UUID authorId = null;
-            if (session != null && session.getAttribute(LoginServlet.SESSION_USER) != null) {
-                User user = (User) session.getAttribute(LoginServlet.SESSION_USER);
-                authorId = user.getId();
+            if (session == null || session.getAttribute(LoginServlet.SESSION_USER) == null) {
+                throw new ValidationException("Authentification requise");
             }
+            User user = (User) session.getAttribute(LoginServlet.SESSION_USER);
+            UUID authorId = user.getId();
 
-            Long categoryId = null;
-            if (categoryIdParam != null && !categoryIdParam.isBlank()) {
-                categoryId = ValidationUtils.validateLongId(categoryIdParam);
-            }
+            Long categoryId = ValidationUtils.validateLongId(categoryIdParam);
 
             Annonce created = annonceService.create(annonce, authorId, categoryId);
             if (created == null || created.getId() == null) {

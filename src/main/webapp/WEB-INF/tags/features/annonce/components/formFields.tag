@@ -19,8 +19,8 @@
         <div class="space-y-2">
             <label class="text-sm font-medium leading-none text-zinc-900" for="categoryId">Catégorie</label>
             <select class="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2"
-                    id="categoryId" name="categoryId">
-                <option value="">-- Sélectionner une catégorie --</option>
+                    id="categoryId" name="categoryId" required>
+                <option value="" disabled ${empty selectedCategoryId ? 'selected' : ''}>-- Sélectionner une catégorie --</option>
                 <c:forEach items="${categories}" var="cat">
                     <option value="${cat.id}" ${cat.id.toString() == selectedCategoryId ? 'selected' : ''}>
                         <c:out value="${cat.label}" />

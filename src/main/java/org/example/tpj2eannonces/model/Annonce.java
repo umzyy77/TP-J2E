@@ -66,12 +66,14 @@ public class Annonce implements Serializable {
     @Column(nullable = false, length = 20)
     private AnnonceStatus status = AnnonceStatus.DRAFT;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
+    @NotNull(message = "L'auteur est obligatoire")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @NotNull(message = "La categorie est obligatoire")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
     public Annonce() {

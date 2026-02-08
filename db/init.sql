@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS annonce (
     mail VARCHAR(64) NOT NULL,
     date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-    author_id UUID REFERENCES users(id),
-    category_id BIGINT REFERENCES category(id)
+    author_id UUID NOT NULL REFERENCES users(id),
+    category_id BIGINT NOT NULL REFERENCES category(id)
 );
 
 -- Index pour les recherches

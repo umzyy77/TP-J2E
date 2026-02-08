@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
+import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.utils.JPAUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -20,6 +22,9 @@ class AnnonceRepositoryTest {
 
     private AnnonceRepository repository;
     private UserRepository userRepository;
+    private CategoryRepository categoryRepository;
+    private User defaultAuthor;
+    private Category defaultCategory;
 
     @BeforeAll
     static void setUpClass() {
@@ -35,7 +40,10 @@ class AnnonceRepositoryTest {
     void setUp() {
         repository = new AnnonceRepository();
         userRepository = new UserRepository();
+        categoryRepository = new CategoryRepository();
         cleanDatabase();
+        defaultAuthor = saveUser("defaultUser", "default@test.com");
+        defaultCategory = saveCategory("DefaultCategory");
     }
 
     @AfterEach
@@ -57,6 +65,8 @@ class AnnonceRepositoryTest {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             Annonce annonce = new Annonce(title, description, adress, mail);
+            annonce.setAuthor(em.find(User.class, defaultAuthor.getId()));
+            annonce.setCategory(em.find(Category.class, defaultCategory.getId()));
             repository.save(em, annonce);
             em.getTransaction().commit();
             return annonce;
@@ -70,6 +80,16 @@ class AnnonceRepositoryTest {
             userRepository.save(em, user);
             em.getTransaction().commit();
             return user;
+        }
+    }
+
+    private Category saveCategory(String label) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            em.getTransaction().begin();
+            Category category = new Category(label);
+            categoryRepository.save(em, category);
+            em.getTransaction().commit();
+            return category;
         }
     }
 
@@ -148,7 +168,7 @@ class AnnonceRepositoryTest {
 
     @Test
     void searchByKeyword_shouldFindByTitle() {
-        saveAnnonce("Voiture à vendre", "Belle voiture", "Paris", "mail@test.com");
+        saveAnnonce("Voiture a vendre", "Belle voiture", "Paris", "mail@test.com");
         saveAnnonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com");
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
@@ -195,12 +215,16 @@ class AnnonceRepositoryTest {
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
+            Category managedCategory = em.find(Category.class, defaultCategory.getId());
+
             Annonce a1 = new Annonce("Annonce 1", "Desc", "Addr", "mail@test.com");
             a1.setAuthor(em.find(User.class, author1.getId()));
+            a1.setCategory(managedCategory);
             repository.save(em, a1);
 
             Annonce a2 = new Annonce("Annonce 2", "Desc", "Addr", "mail2@test.com");
             a2.setAuthor(em.find(User.class, author2.getId()));
+            a2.setCategory(managedCategory);
             repository.save(em, a2);
             em.getTransaction().commit();
         }

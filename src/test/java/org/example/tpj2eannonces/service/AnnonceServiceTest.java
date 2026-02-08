@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
@@ -25,6 +26,8 @@ class AnnonceServiceTest {
     private AnnonceService annonceService;
     private UserService userService;
     private CategoryService categoryService;
+    private User defaultAuthor;
+    private Category defaultCategory;
 
     @BeforeAll
     static void setUpClass() {
@@ -42,6 +45,8 @@ class AnnonceServiceTest {
         userService = new UserService();
         categoryService = new CategoryService();
         cleanDatabase();
+        defaultAuthor = userService.create(new User("author", "author@test.com", "password"));
+        defaultCategory = categoryService.create(new Category("Immobilier"));
     }
 
     @AfterEach
@@ -59,11 +64,13 @@ class AnnonceServiceTest {
         }
     }
 
+    private Annonce createAnnonce(String title, String description, String adress, String mail) {
+        return annonceService.create(new Annonce(title, description, adress, mail), defaultAuthor.getId(), defaultCategory.getId());
+    }
+
     @Test
     void create_shouldPersistAnnonce() {
-        Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
-
-        Annonce created = annonceService.create(annonce, null, null);
+        Annonce created = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
 
         assertThat(created.getId()).isNotNull();
         assertThat(created.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
@@ -71,16 +78,16 @@ class AnnonceServiceTest {
 
     @Test
     void createWithRelations_shouldAssignAuthorAndCategory() {
-        User author = userService.create(new User("author", "author@test.com", "password"));
-        Category category = categoryService.create(new Category("Immobilier"));
+        User author = userService.create(new User("author2", "author2@test.com", "password"));
+        Category category = categoryService.create(new Category("Services"));
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
 
         Annonce created = annonceService.create(annonce, author.getId(), category.getId());
 
         Optional<Annonce> found = annonceService.findByIdWithRelations(created.getId());
         assertThat(found).isPresent();
-        assertThat(found.get().getAuthor().getUsername()).isEqualTo("author");
-        assertThat(found.get().getCategory().getLabel()).isEqualTo("Immobilier");
+        assertThat(found.get().getAuthor().getUsername()).isEqualTo("author2");
+        assertThat(found.get().getCategory().getLabel()).isEqualTo("Services");
     }
 
     @Test
@@ -88,14 +95,14 @@ class AnnonceServiceTest {
         UUID invalidAuthorId = UUID.randomUUID();
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
 
-        assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, null))
+        assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, defaultCategory.getId()))
                 .isInstanceOf(RepositoryException.class)
-                .hasMessageContaining("Auteur non trouvé");
+                .hasMessageContaining("Auteur non trouve");
     }
 
     @Test
     void publish_shouldChangeStatusToPublished() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
+        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
         assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
 
         Annonce published = annonceService.changeStatus(annonce.getId(), "publish");
@@ -105,7 +112,7 @@ class AnnonceServiceTest {
 
     @Test
     void archive_shouldChangeStatusToArchived() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
+        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
         annonceService.changeStatus(annonce.getId(), "publish");
 
         Annonce archived = annonceService.changeStatus(annonce.getId(), "archive");
@@ -114,8 +121,17 @@ class AnnonceServiceTest {
     }
 
     @Test
+    void archiveFromDraft_shouldFail() {
+        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
+
+        assertThatThrownBy(() -> annonceService.changeStatus(annonce.getId(), "archive"))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("Transition invalide");
+    }
+
+    @Test
     void delete_shouldRemoveAnnonce() {
-        Annonce annonce = annonceService.create(new Annonce("Titre", "Description", "Adresse", "mail@test.com"), null, null);
+        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
 
         boolean deleted = annonceService.delete(annonce.getId());
 
@@ -125,8 +141,8 @@ class AnnonceServiceTest {
 
     @Test
     void findAllPublished_shouldReturnOnlyPublished() {
-        annonceService.create(new Annonce("Draft", "Desc", "Addr", "mail@test.com"), null, null);
-        Annonce published = annonceService.create(new Annonce("Published", "Desc", "Addr", "mail2@test.com"), null, null);
+        createAnnonce("Draft", "Desc", "Addr", "mail@test.com");
+        Annonce published = createAnnonce("Published", "Desc", "Addr", "mail2@test.com");
         annonceService.changeStatus(published.getId(), "publish");
 
         List<Annonce> result = annonceService.findAllPublished(0, 10);
@@ -137,8 +153,8 @@ class AnnonceServiceTest {
 
     @Test
     void search_shouldFindByKeyword() {
-        annonceService.create(new Annonce("Voiture à vendre", "Belle voiture", "Paris", "mail@test.com"), null, null);
-        annonceService.create(new Annonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com"), null, null);
+        createAnnonce("Voiture a vendre", "Belle voiture", "Paris", "mail@test.com");
+        createAnnonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com");
 
         List<Annonce> results = annonceService.search("voiture", 0, 10);
 
@@ -147,8 +163,8 @@ class AnnonceServiceTest {
 
     @Test
     void count_shouldReturnTotal() {
-        annonceService.create(new Annonce("Titre 1", "Desc", "Addr", "mail@test.com"), null, null);
-        annonceService.create(new Annonce("Titre 2", "Desc", "Addr", "mail2@test.com"), null, null);
+        createAnnonce("Titre 1", "Desc", "Addr", "mail@test.com");
+        createAnnonce("Titre 2", "Desc", "Addr", "mail2@test.com");
 
         long count = annonceService.count();
 

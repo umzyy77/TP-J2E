@@ -111,13 +111,10 @@ public class AnnoncePatchServlet extends BaseServlet {
             existing.setAdress(annonce.getAdress());
             existing.setMail(annonce.getMail());
 
-            if (categoryIdParam != null && !categoryIdParam.isBlank()) {
-                Long categoryId = ValidationUtils.validateLongId(categoryIdParam);
-                Optional<Category> catOpt = categoryService.findById(categoryId);
-                catOpt.ifPresent(existing::setCategory);
-            } else {
-                existing.setCategory(null);
-            }
+            Long categoryId = ValidationUtils.validateLongId(categoryIdParam);
+            Category category = categoryService.findById(categoryId)
+                    .orElseThrow(() -> new ValidationException("Categorie invalide"));
+            existing.setCategory(category);
 
             Annonce updated = annonceService.update(existing);
             if (updated == null) {

@@ -61,7 +61,14 @@ class EntityMappingTest {
 
     @Test
     void annonce_shouldBePersisted() {
+        User author = new User("author1", "author1@example.com", "password123");
+        Category category = new Category("Immobilier");
+        em.persist(author);
+        em.persist(category);
+
         Annonce annonce = new Annonce("Titre test", "Description test", "123 rue Test", "test@example.com");
+        annonce.setAuthor(author);
+        annonce.setCategory(category);
 
         em.persist(annonce);
         em.flush();
@@ -74,10 +81,13 @@ class EntityMappingTest {
     @Test
     void annonce_shouldHaveAuthorRelation() {
         User author = new User("author", "author@example.com", "password123");
+        Category category = new Category("Services");
         em.persist(author);
+        em.persist(category);
 
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
         annonce.setAuthor(author);
+        annonce.setCategory(category);
 
         em.persist(annonce);
         em.flush();
@@ -91,10 +101,13 @@ class EntityMappingTest {
     @Test
     void annonce_shouldHaveCategoryRelation() {
         Category category = new Category("Services");
+        User author = new User("author2", "author2@example.com", "password123");
         em.persist(category);
+        em.persist(author);
 
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
         annonce.setCategory(category);
+        annonce.setAuthor(author);
 
         em.persist(annonce);
         em.flush();
@@ -128,14 +141,18 @@ class EntityMappingTest {
     @Test
     void user_shouldHaveAnnoncesCollection() {
         User author = new User("testauthor", "testauthor@example.com", "password123");
+        Category category = new Category("Formation");
         em.persist(author);
+        em.persist(category);
 
         Annonce annonce1 = new Annonce("Annonce 1", "Description 1", "Adresse 1", "mail1@test.com");
         annonce1.setAuthor(author);
+        annonce1.setCategory(category);
         em.persist(annonce1);
 
         Annonce annonce2 = new Annonce("Annonce 2", "Description 2", "Adresse 2", "mail2@test.com");
         annonce2.setAuthor(author);
+        annonce2.setCategory(category);
         em.persist(annonce2);
 
         em.flush();

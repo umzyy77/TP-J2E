@@ -24,22 +24,24 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
     }
 
     public Annonce saveWithRelations(EntityManager em, Annonce annonce, UUID authorId, Long categoryId) {
-        if (authorId != null) {
-            User author = em.find(User.class, authorId);
-            if (author == null) {
-                throw new RepositoryException("Auteur non trouvé: " + authorId);
-            }
-            annonce.setAuthor(author);
+        if (authorId == null) {
+            throw new RepositoryException("Auteur obligatoire");
+        }
+        if (categoryId == null) {
+            throw new RepositoryException("Categorie obligatoire");
         }
 
-        if (categoryId != null) {
-            Category category = em.find(Category.class, categoryId);
-            if (category == null) {
-                throw new RepositoryException("Catégorie non trouvée: " + categoryId);
-            }
-            annonce.setCategory(category);
+        User author = em.find(User.class, authorId);
+        if (author == null) {
+            throw new RepositoryException("Auteur non trouve: " + authorId);
+        }
+        Category category = em.find(Category.class, categoryId);
+        if (category == null) {
+            throw new RepositoryException("Categorie non trouvee: " + categoryId);
         }
 
+        annonce.setAuthor(author);
+        annonce.setCategory(category);
         em.persist(annonce);
         return annonce;
     }
@@ -47,7 +49,7 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
     public Annonce updateStatus(EntityManager em, Long annonceId, AnnonceStatus targetStatus) {
         Annonce annonce = em.find(Annonce.class, annonceId);
         if (annonce == null) {
-            throw new RepositoryException("Annonce non trouvée: " + annonceId);
+            throw new RepositoryException("Annonce non trouvee: " + annonceId);
         }
         annonce.setStatus(targetStatus);
         return annonce;
