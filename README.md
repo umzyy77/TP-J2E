@@ -139,14 +139,14 @@ src/main/java/org/example/tpj2eannonces/
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
-| id | UUID | PK, auto-généré |
+| id | Long | PK, auto-généré |
 | label | String (50) | unique, @NotBlank |
 
 ### Annonce (`annonce`)
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
-| id | UUID | PK, auto-généré |
+| id | Long | PK, auto-généré |
 | title | String (64) | @NotBlank, @Size(max=64) |
 | description | String (256) | @NotBlank, @Size(max=256) |
 | adress | String (64) | @NotBlank, @Size(max=64) |
@@ -177,7 +177,7 @@ DRAFT --[publish]--> PUBLISHED --[archive]--> ARCHIVED
 | POST | `/register` | RegisterServlet | Création de compte | Non |
 | GET | `/logout` | LogoutServlet | Déconnexion | Oui |
 | GET | `/AnnonceList` | AnnonceListServlet | Liste paginée (filtres: `q`, `category`, `status`, `author`) | Non |
-| GET | `/AnnonceDetail` | AnnonceDetailServlet | Détail annonce (`?id=UUID`) | Non |
+| GET | `/AnnonceDetail` | AnnonceDetailServlet | Détail annonce (`?id=Long`) | Non |
 | GET | `/AnnonceAdd` | AnnonceAddServlet | Formulaire de création | Oui |
 | POST | `/AnnonceAdd` | AnnonceAddServlet | Créer une annonce | Oui |
 | GET | `/AnnoncePatch` | AnnoncePatchServlet | Formulaire de modification | Oui |
@@ -187,16 +187,17 @@ DRAFT --[publish]--> PUBLISHED --[archive]--> ARCHIVED
 ## Sécurité
 
 - **Authentification** : session HTTP (`loggedUser`), timeout 30 min
-- **AuthenticationFilter** (`/*`) : protège toutes les routes sauf `/login`, `/logout`, `/register`, `/AnnonceList`, `/AnnonceDetail`, `/index.jsp` et les ressources statiques
+- **AuthenticationFilter** (`/*`) : protège toutes les routes sauf `/`, `/login`, `/register`, `/AnnonceList`, `/AnnonceDetail`, `/index.jsp` et les ressources statiques
 - **Mots de passe** : hachés avec BCrypt (12 rounds) via `PasswordUtils`
 - **EncodingFilter** (`/*`) : force UTF-8 sur toutes les requêtes/réponses
+- **Autorisation métier** : seules les annonces dont l’utilisateur connecté est l’auteur peuvent être modifiées/supprimées (`403 Forbidden` sinon)
 
 ## Validation & gestion des erreurs
 
 ### Validation
 
 - **Bean Validation** : annotations `@NotBlank`, `@Size`, `@Email`, `@NotNull` sur les entités
-- **ValidationUtils** : validation côté servlet (title, description, adress, email, UUID)
+- **ValidationUtils** : validation côté servlet (title, description, adress, email, IDs `Long`/`UUID`)
 - **Côté client** : attributs HTML5 (`minlength`, `type="email"`, etc.)
 
 ### Exceptions
@@ -232,8 +233,8 @@ mvn test
 | UserRepositoryTest | Repository | 5 |
 | AnnonceRepositoryTest | Repository | 12 |
 | CategoryServiceTest | Service | 4 |
-| AnnonceServiceTest | Service | 9 |
-| **Total** | | **42** |
+| AnnonceServiceTest | Service | 10 |
+| **Total** | | **43** |
 
 Les tests utilisent une base H2 in-memory (`create-drop`) et Mockito pour les mocks.
 
@@ -317,11 +318,11 @@ mvn sonar:sonar
 "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.id = :id"
 ```
 
-### 4. UUID comme clé primaire
+### 4. UUID pour l'entité User
 
-**Problème** : Migration de l'existant vers JPA avec des UUID.
+**Problème** : Besoin d'un identifiant global unique pour les utilisateurs.
 
-**Solution** : `@GeneratedValue(strategy = GenerationType.UUID)` pour la génération automatique et la compatibilité avec PostgreSQL.
+**Solution** : `User.id` utilise `@GeneratedValue(strategy = GenerationType.UUID)`, tandis que `Annonce.id` et `Category.id` restent en `Long` auto-généré.
 
 ### 5. Suppression de catégories avec annonces liées
 

@@ -1,6 +1,7 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
@@ -45,6 +46,12 @@ public class AnnoncePatchServlet extends BaseServlet {
             }
 
             Annonce annonce = annonceOpt.get();
+            UUID loggedUserId = requireLoggedUserId(request);
+            if (isOwnedBy(annonce, loggedUserId)) {
+                sendForbidden(response);
+                return;
+            }
+
             request.setAttribute(ATTR_ANNONCE, annonce);
             request.setAttribute(ATTR_CATEGORIES, categoryService.findAll());
             if (annonce.getCategory() != null) {
@@ -66,6 +73,18 @@ public class AnnoncePatchServlet extends BaseServlet {
 
         try {
             Long id = ValidationUtils.validateLongId(request.getParameter("id"));
+            UUID loggedUserId = requireLoggedUserId(request);
+            Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
+            if (annonceOpt.isEmpty()) {
+                forwardTo(request, response, VIEW_404);
+                return;
+            }
+
+            Annonce existing = annonceOpt.get();
+            if (isOwnedBy(existing, loggedUserId)) {
+                sendForbidden(response);
+                return;
+            }
 
             if (AnnonceStatus.fromAction(action).isPresent()) {
                 annonceService.changeStatus(id, action);
@@ -74,7 +93,7 @@ public class AnnoncePatchServlet extends BaseServlet {
             }
 
             if ("update".equals(action)) {
-                handleUpdate(request, response, id);
+                handleUpdate(request, response, existing);
                 return;
             }
 
@@ -88,9 +107,9 @@ public class AnnoncePatchServlet extends BaseServlet {
         }
     }
 
-    private void handleUpdate(HttpServletRequest request, HttpServletResponse response, Long id) {
+    private void handleUpdate(HttpServletRequest request, HttpServletResponse response, Annonce existing) {
         Annonce annonce = new Annonce();
-        annonce.setId(id);
+        annonce.setId(existing.getId());
         String categoryIdParam = request.getParameter("categoryId");
 
         try {
@@ -98,14 +117,6 @@ public class AnnoncePatchServlet extends BaseServlet {
             annonce.setDescription(ValidationUtils.validateDescription(request.getParameter("description")));
             annonce.setAdress(ValidationUtils.validateAdress(request.getParameter("adress")));
             annonce.setMail(ValidationUtils.validateEmail(request.getParameter("mail")));
-
-            Optional<Annonce> existingOpt = annonceService.findByIdWithRelations(id);
-            if (existingOpt.isEmpty()) {
-                forwardTo(request, response, VIEW_404);
-                return;
-            }
-
-            Annonce existing = existingOpt.get();
             existing.setTitle(annonce.getTitle());
             existing.setDescription(annonce.getDescription());
             existing.setAdress(annonce.getAdress());

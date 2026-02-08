@@ -4,11 +4,9 @@ import java.util.UUID;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
-import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
-import org.example.tpj2eannonces.servlet.auth.LoginServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "annonceAddServlet", urlPatterns = "/AnnonceAdd")
 public class AnnonceAddServlet extends BaseServlet {
@@ -61,12 +58,7 @@ public class AnnonceAddServlet extends BaseServlet {
             annonce.setAdress(ValidationUtils.validateAdress(annonce.getAdress()));
             annonce.setMail(ValidationUtils.validateEmail(annonce.getMail()));
 
-            HttpSession session = request.getSession(false);
-            if (session == null || session.getAttribute(LoginServlet.SESSION_USER) == null) {
-                throw new ValidationException("Authentification requise");
-            }
-            User user = (User) session.getAttribute(LoginServlet.SESSION_USER);
-            UUID authorId = user.getId();
+            UUID authorId = requireLoggedUserId(request);
 
             Long categoryId = ValidationUtils.validateLongId(categoryIdParam);
 

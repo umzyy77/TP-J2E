@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.Objects;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,7 +28,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "annonce")
-public class Annonce implements Serializable {
+public class Annonce implements Serializable, OwnableByUser {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -176,6 +177,11 @@ public class Annonce implements Serializable {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    @Override
+    public UUID getOwnerId() {
+        return author != null ? author.getId() : null;
     }
 
     @Override

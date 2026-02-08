@@ -1,6 +1,10 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import org.example.tpj2eannonces.exception.ValidationException;
+import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
@@ -26,6 +30,17 @@ public class AnnonceDeleteServlet extends BaseServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) {
         try {
             Long id = ValidationUtils.validateLongId(request.getParameter("id"));
+            UUID loggedUserId = requireLoggedUserId(request);
+            Optional<Annonce> annonceOpt = annonceService.findByIdWithRelations(id);
+            if (annonceOpt.isEmpty()) {
+                forwardTo(request, response, VIEW_404);
+                return;
+            }
+            if (isOwnedBy(annonceOpt.get(), loggedUserId)) {
+                sendForbidden(response);
+                return;
+            }
+
             boolean deleted = annonceService.delete(id);
             if (!deleted) {
                 forwardTo(request, response, VIEW_404);
