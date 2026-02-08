@@ -5,5 +5,6 @@
 <layout:page title="Ajouter une annonce">
     <annonce:form title="Nouvelle annonce" subtitle="Remplissez les informations ci-dessous."
         actionUrl="${pageContext.request.contextPath}/AnnonceAdd" submitLabel="Enregistrer"
-        annonceObj="${requestScope.annonce}" errorMessage="${requestScope.message}" />
+        annonceObj="${requestScope.annonce}" errorMessage="${requestScope.message}"
+        categories="${requestScope.categories}" selectedCategoryId="${requestScope.selectedCategoryId}" />
 </layout:page>

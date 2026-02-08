@@ -3,7 +3,7 @@
 <%@ attribute name="href" required="true" %>
 <%@ attribute name="label" required="true" %>
 <%@ attribute name="variant" required="false" %>
-<%@ attribute name="iconPath" required="false" %>
+<%@ attribute name="icon" required="false" %>
 <%@ attribute name="onclick" required="false" %>
 
 <c:set var="style" value="${empty variant ? 'default' : variant}" />
@@ -25,10 +25,8 @@
 
 <a href="${href}" class="${classes}"
     <c:if test="${not empty onclick}">onclick="${onclick}"</c:if>>
-    <c:if test="${not empty iconPath}">
-        <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="${iconPath}" />
-        </svg>
+    <c:if test="${not empty icon}">
+        <i data-lucide="${icon}" class="mr-2 h-4 w-4"></i>
     </c:if>
     <c:out value="${label}" />
 </a>

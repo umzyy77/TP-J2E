@@ -25,7 +25,7 @@ public class AnnonceDeleteServlet extends BaseServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
         try {
             UUID id = ValidationUtils.validateId(request.getParameter("id"));
             boolean deleted = annonceService.delete(id);

@@ -6,6 +6,7 @@ import org.example.tpj2eannonces.exception.ValidationException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.AnnonceService;
+import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
 import org.example.tpj2eannonces.servlet.auth.LoginServlet;
 import org.example.tpj2eannonces.utils.ValidationUtils;
@@ -22,8 +23,11 @@ public class AnnonceAddServlet extends BaseServlet {
     private static final Logger logger = LoggerFactory.getLogger(AnnonceAddServlet.class);
     private static final String VIEW_ADD = "/WEB-INF/jsp/features/annonce/pages/add.jsp";
     private static final String ATTR_ANNONCE = "annonce";
+    private static final String ATTR_CATEGORIES = "categories";
+    private static final String ATTR_SELECTED_CATEGORY = "selectedCategoryId";
 
     private final transient AnnonceService annonceService = new AnnonceService();
+    private final transient CategoryService categoryService = new CategoryService();
 
     @Override
     protected Logger getLogger() {
@@ -34,6 +38,7 @@ public class AnnonceAddServlet extends BaseServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
             request.setAttribute(ATTR_ANNONCE, new Annonce());
+            request.setAttribute(ATTR_CATEGORIES, categoryService.findAll());
             forwardTo(request, response, VIEW_ADD);
         } catch (Exception e) {
             handleError(response, e);
@@ -47,6 +52,8 @@ public class AnnonceAddServlet extends BaseServlet {
         annonce.setDescription(request.getParameter("description"));
         annonce.setAdress(request.getParameter("adress"));
         annonce.setMail(request.getParameter("mail"));
+
+        String categoryIdParam = request.getParameter("categoryId");
 
         try {
             annonce.setTitle(ValidationUtils.validateTitle(annonce.getTitle()));
@@ -62,11 +69,16 @@ public class AnnonceAddServlet extends BaseServlet {
             }
 
             UUID categoryId = null;
+            if (categoryIdParam != null && !categoryIdParam.isBlank()) {
+                categoryId = UUID.fromString(categoryIdParam);
+            }
 
             Annonce created = annonceService.create(annonce, authorId, categoryId);
             if (created == null || created.getId() == null) {
                 request.setAttribute(ATTR_MESSAGE, "Erreur lors de l'enregistrement.");
                 request.setAttribute(ATTR_ANNONCE, annonce);
+                request.setAttribute(ATTR_CATEGORIES, categoryService.findAll());
+                request.setAttribute(ATTR_SELECTED_CATEGORY, categoryIdParam);
                 forwardTo(request, response, VIEW_ADD);
                 return;
             }
@@ -75,6 +87,8 @@ public class AnnonceAddServlet extends BaseServlet {
         } catch (ValidationException e) {
             request.setAttribute(ATTR_MESSAGE, e.getMessage());
             request.setAttribute(ATTR_ANNONCE, annonce);
+            request.setAttribute(ATTR_CATEGORIES, categoryService.findAll());
+            request.setAttribute(ATTR_SELECTED_CATEGORY, categoryIdParam);
             forwardTo(request, response, VIEW_ADD);
         } catch (RuntimeException e) {
             handleDatabaseError(request, response, e.getMessage());
@@ -83,4 +97,3 @@ public class AnnonceAddServlet extends BaseServlet {
         }
     }
 }
-

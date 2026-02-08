@@ -6,5 +6,6 @@
     <annonce:form title="Modifier l'annonce" subtitle="Mettez à jour les informations."
         actionUrl="${pageContext.request.contextPath}/AnnoncePatch" submitLabel="Mettre à jour"
         annonceObj="${requestScope.annonce}" annonceId="${requestScope.annonce.id}"
-        errorMessage="${requestScope.message}" />
+        errorMessage="${requestScope.message}"
+        categories="${requestScope.categories}" selectedCategoryId="${requestScope.selectedCategoryId}" />
 </layout:page>

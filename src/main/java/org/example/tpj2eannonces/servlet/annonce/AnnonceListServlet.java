@@ -36,11 +36,16 @@ public class AnnonceListServlet extends BaseServlet {
             String authorParam = request.getParameter("author");
             String categoryParam = request.getParameter("category");
             String statusParam = request.getParameter("status");
+            String searchParam = request.getParameter("q");
 
             List<Annonce> annonces;
             long totalCount;
 
-            if (authorParam != null && !authorParam.isEmpty()) {
+            if (searchParam != null && !searchParam.isBlank()) {
+                annonces = annonceService.search(searchParam.trim(), page, PAGE_SIZE);
+                totalCount = annonceService.countByKeyword(searchParam.trim());
+                request.setAttribute("searchQuery", searchParam.trim());
+            } else if (authorParam != null && !authorParam.isEmpty()) {
                 UUID authorId = UUID.fromString(authorParam);
                 annonces = annonceService.findByAuthor(authorId, page, PAGE_SIZE);
                 totalCount = annonceService.countByAuthor(authorId);
@@ -62,6 +67,20 @@ public class AnnonceListServlet extends BaseServlet {
                 totalCount = annonceService.count();
             }
 
+            String baseUrl = request.getContextPath() + "/AnnonceList?_=1";
+            if (searchParam != null && !searchParam.isBlank()) {
+                baseUrl += "&q=" + searchParam.trim();
+            }
+            if (authorParam != null && !authorParam.isEmpty()) {
+                baseUrl += "&author=" + authorParam;
+            }
+            if (categoryParam != null && !categoryParam.isEmpty()) {
+                baseUrl += "&category=" + categoryParam;
+            }
+            if (statusParam != null && !statusParam.isEmpty()) {
+                baseUrl += "&status=" + statusParam;
+            }
+
             request.setAttribute("categories", categoryService.findAll());
             request.setAttribute("statuses", AnnonceStatus.values());
             request.setAttribute("annonceList", annonces);
@@ -69,6 +88,7 @@ public class AnnonceListServlet extends BaseServlet {
             request.setAttribute("currentPage", page);
             request.setAttribute("pageSize", PAGE_SIZE);
             request.setAttribute("totalPages", (int) Math.ceil((double) totalCount / PAGE_SIZE));
+            request.setAttribute("paginationBaseUrl", baseUrl);
 
             forwardTo(request, response, VIEW_LIST);
         } catch (IllegalArgumentException _) {

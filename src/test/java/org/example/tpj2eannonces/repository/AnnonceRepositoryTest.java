@@ -63,10 +63,10 @@ class AnnonceRepositoryTest {
         }
     }
 
-    private User saveUser(String username, String email, String password) {
+    private User saveUser(String username, String email) {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
-            User user = new User(username, email, password);
+            User user = new User(username, email, "password");
             userRepository.save(em, user);
             em.getTransaction().commit();
             return user;
@@ -190,8 +190,8 @@ class AnnonceRepositoryTest {
 
     @Test
     void findByAuthor_shouldFilterByAuthor() {
-        User author1 = saveUser("user1", "user1@test.com", "password");
-        User author2 = saveUser("user2", "user2@test.com", "password");
+        User author1 = saveUser("user1", "user1@test.com");
+        User author2 = saveUser("user2", "user2@test.com");
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();

@@ -9,9 +9,7 @@
         <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-lg">
             <div class="flex items-start gap-4">
                 <div id="dialogIcon" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-                    <svg class="h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
+                    <i data-lucide="triangle-alert" class="h-5 w-5 text-red-600"></i>
                 </div>
                 <div class="flex-1">
                     <h3 id="dialogTitle" class="text-lg font-semibold text-zinc-900"></h3>
@@ -23,9 +21,12 @@
                         class="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50">
                     Annuler
                 </button>
-                <a id="dialogConfirmBtn" href="#"
-                   class="inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 text-sm font-medium text-white shadow transition-colors hover:bg-red-700">
-                </a>
+                <form id="dialogForm" method="post" action="#" class="inline">
+                    <input type="hidden" id="dialogFormId" name="id" value="" />
+                    <button id="dialogConfirmBtn" type="submit"
+                       class="inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 text-sm font-medium text-white shadow transition-colors hover:bg-red-700">
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -33,12 +34,13 @@
 
 <script>
     function openDialog(options) {
-        const { url, title, message, confirmLabel, variant = 'danger' } = options;
-        
+        const { actionUrl, entityId, title, message, confirmLabel, variant = 'danger' } = options;
+
         document.getElementById('dialogTitle').textContent = title || 'Confirmation';
         document.getElementById('dialogMessage').textContent = message || 'Êtes-vous sûr ?';
         document.getElementById('dialogConfirmBtn').textContent = confirmLabel || 'Confirmer';
-        document.getElementById('dialogConfirmBtn').href = url;
+        document.getElementById('dialogForm').action = actionUrl;
+        document.getElementById('dialogFormId').value = entityId;
 
         const icon = document.getElementById('dialogIcon');
         const btn = document.getElementById('dialogConfirmBtn');

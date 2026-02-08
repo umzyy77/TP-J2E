@@ -66,6 +66,15 @@ public class AnnonceRepository extends GenericRepository<Annonce> {
         return query.getResultList();
     }
 
+    public long countByKeyword(EntityManager em, String keyword) {
+        String jpql = "SELECT COUNT(a) FROM Annonce a " +
+                "WHERE LOWER(a.title) LIKE LOWER(:keyword) OR " +
+                "LOWER(a.description) LIKE LOWER(:keyword)";
+        return em.createQuery(jpql, Long.class)
+                .setParameter(PARAM_KEYWORD, "%" + keyword + "%")
+                .getSingleResult();
+    }
+
     public List<Annonce> findByStatus(EntityManager em, AnnonceStatus status, int page, int size) {
         String jpql = "SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.status = :status ORDER BY a.date DESC";
         TypedQuery<Annonce> query = em.createQuery(jpql, Annonce.class);

@@ -25,14 +25,25 @@
             <c:if test="${not empty sessionScope.loggedUser}">
                 <a class="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white shadow transition-colors hover:bg-zinc-800"
                     href="${pageContext.request.contextPath}/AnnonceAdd">
-                    <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
+                    <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
                     Nouvelle annonce
                 </a>
             </c:if>
         </div>
+
+        <form method="get" action="${pageContext.request.contextPath}/AnnonceList" class="flex items-center gap-2">
+            <input type="text" name="q" value="${requestScope.searchQuery}"
+                placeholder="Rechercher par mot-clé..."
+                class="h-9 w-64 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm placeholder:text-zinc-400" />
+            <button type="submit"
+                class="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-3 text-sm font-medium text-white shadow transition-colors hover:bg-zinc-800">
+                Rechercher
+            </button>
+            <c:if test="${not empty requestScope.searchQuery}">
+                <a href="${pageContext.request.contextPath}/AnnonceList"
+                   class="text-sm text-zinc-500 hover:underline">Effacer</a>
+            </c:if>
+        </form>
 
         <div class="flex flex-wrap items-center gap-4">
             <annonce:categoryFilter categories="${requestScope.categories}" selectedCategory="${requestScope.selectedCategory}" />
@@ -61,6 +72,8 @@
                     <annonce:listItem annonce="${item}" />
                 </c:forEach>
             </div>
+            <ui:pagination currentPage="${requestScope.currentPage}" totalPages="${requestScope.totalPages}"
+                baseUrl="${requestScope.paginationBaseUrl}" />
         </c:if>
     </div>
 </layout:page>

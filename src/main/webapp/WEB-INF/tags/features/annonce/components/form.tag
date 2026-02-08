@@ -9,6 +9,8 @@
 <%@ attribute name="annonceObj" required="true" type="org.example.tpj2eannonces.model.Annonce" %>
 <%@ attribute name="annonceId" required="false" %>
 <%@ attribute name="errorMessage" required="false" %>
+<%@ attribute name="categories" required="false" type="java.util.List" %>
+<%@ attribute name="selectedCategoryId" required="false" %>
 
 <div class="mx-auto max-w-2xl space-y-6">
     <div class="flex items-center justify-between">
@@ -29,7 +31,7 @@
                 <input type="hidden" name="id" value="${annonceId}">
                 <input type="hidden" name="action" value="update">
             </c:if>
-            <annonce:formFields annonce="${annonceObj}" />
+            <annonce:formFields annonce="${annonceObj}" categories="${categories}" selectedCategoryId="${selectedCategoryId}" />
             <div class="flex items-center gap-3 border-t border-zinc-200 pt-6">
                 <button class="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-6 text-sm font-medium text-white shadow transition-colors hover:bg-zinc-800"
                         type="submit"><c:out value="${submitLabel}"/></button>

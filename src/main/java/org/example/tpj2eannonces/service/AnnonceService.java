@@ -61,6 +61,10 @@ public class AnnonceService {
         return JPAUtil.inReadOnly(em -> repository.searchByKeyword(em, keyword, page, size));
     }
 
+    public long countByKeyword(String keyword) {
+        return JPAUtil.inReadOnly(em -> repository.countByKeyword(em, keyword));
+    }
+
     public long count() {
         return JPAUtil.inReadOnly(repository::count);
     }
