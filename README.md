@@ -1,19 +1,98 @@
 # MasterAnnonce - Application Web JPA/Hibernate
 
-Application de gestion d'annonces développée avec Jakarta EE, JPA/Hibernate et PostgreSQL.
+Application de gestion d'annonces développée avec Jakarta EE 10, JPA/Hibernate et PostgreSQL.
 
-## 🏗️ Architecture
+**Statut :** MVP (TP universitaire)
+**Périmètre :** Backend + Frontend JSP, authentification, CRUD annonces avec recherche/filtrage/pagination.
+
+## Prérequis & versions
+
+- **Java 25** ou supérieur
+- **Maven 3.8+**
+- **PostgreSQL 14+** (ou Docker)
+- **Apache Tomcat 10.1+** (compatible Jakarta EE 10)
+
+## Installation
+
+```bash
+# Cloner le projet
+git clone https://github.com/umzyy77/TP-J2E.git
+cd TP-J2E
+
+# Compiler
+mvn clean compile
+```
+
+## Configuration
+
+### Base de données (persistence.xml)
+
+La configuration JPA se trouve dans `src/main/resources/META-INF/persistence.xml` :
+
+| Propriété | Valeur |
+|-----------|--------|
+| Persistence Unit | `MasterAnnoncePU` |
+| Driver | `org.postgresql.Driver` |
+| URL | `jdbc:postgresql://localhost:5432/MasterAnnonce` |
+| User / Password | `postgres` / `postgres` |
+| Dialect | `PostgreSQLDialect` |
+| DDL auto | `update` |
+
+### Tests (H2 in-memory)
+
+Les tests utilisent une base H2 en mémoire configurée dans `src/test/resources/META-INF/persistence.xml` avec `hbm2ddl.auto=create-drop`.
+
+## Lancement en local
+
+### Option 1 : Docker Compose (base de données)
+
+```bash
+# Lancer PostgreSQL avec init + seed automatiques
+docker-compose up -d
+
+# Arrêter et supprimer les volumes
+docker-compose down -v
+```
+
+Le `docker-compose.yml` lance uniquement PostgreSQL et exécute automatiquement `db/init.sql` puis `db/seed.sql` au premier démarrage.
+
+### Option 2 : PostgreSQL local
+
+```bash
+# Créer la base
+psql -U postgres -c "CREATE DATABASE MasterAnnonce;"
+
+# Initialiser le schéma et les données de test
+psql -U postgres -d MasterAnnonce -f db/init.sql
+psql -U postgres -d MasterAnnonce -f db/seed.sql
+```
+
+### Démarrer l'application
+
+```bash
+# créer le WAR et le déployer manuellement
+mvn clean package -DskipTests
+
+# Via le plugin Cargo (Tomcat embarqué, port 8080)
+mvn cargo:run
+```
+
+Accès : `http://localhost:8080/MasterAnnonce/`
+
+## Architecture du code
 
 ```
 src/main/java/org/example/tpj2eannonces/
-├── config/         # Configuration (DatabaseConfig)
-├── exception/      # Exceptions personnalisées
-├── filter/         # Filtres Servlet (AuthenticationFilter)
-├── model/          # Entités JPA (User, Category, Annonce, AnnonceStatus)
-├── repository/     # Couche persistence JPA (JPQL uniquement)
-├── service/        # Couche métier avec gestion des transactions
-├── servlet/        # Contrôleurs Web (Servlets)
-└── utils/          # Utilitaires (JPAUtil, ValidationUtils)
+├── config/          # AppContextListener (init/destroy EntityManagerFactory)
+├── exception/       # DatabaseException, ValidationException
+├── filter/          # AuthenticationFilter, EncodingFilter
+├── model/           # Entités JPA (User, Category, Annonce, AnnonceStatus)
+├── repository/      # Couche persistence JPQL (+ RepositoryException)
+├── service/         # Couche métier + transactions (+ ServiceException)
+├── servlet/         # Contrôleurs Web (Servlets)
+│   ├── annonce/     # AnnonceList, AnnonceDetail, AnnonceAdd, AnnoncePatch, AnnonceDelete
+│   └── auth/        # Login, Register, Logout
+└── utils/           # JPAUtil, ValidationUtils, PasswordUtils
 ```
 
 ### Couches applicatives
@@ -21,223 +100,321 @@ src/main/java/org/example/tpj2eannonces/
 | Couche | Responsabilité |
 |--------|----------------|
 | **Servlet** | Gestion HTTP, validation entrées, délégation au service |
-| **Service** | Logique métier, gestion des transactions |
-| **Repository** | Accès aux données via JPQL |
+| **Service** | Logique métier, gestion des transactions (via `JPAUtil.inTransaction` / `inReadOnly`) |
+| **Repository** | Accès aux données via JPQL exclusivement |
 | **Model** | Entités JPA avec Bean Validation |
 
-## 🔧 Technologies
+## Technologies & dépendances
 
-- **Java 21** avec Jakarta EE 10
-- **JPA 3.1** avec Hibernate 6.4
-- **PostgreSQL** (production) / **H2** (tests)
-- **Maven** pour la gestion de projet
-- **JUnit 5** + **AssertJ** pour les tests
+| Dépendance | Version | Rôle |
+|------------|---------|------|
+| Jakarta Servlet API | 6.0.0 | API Servlet |
+| Jakarta JSTL | 3.0.1 | Tags JSP |
+| Hibernate Core | 6.6.4.Final | Implémentation JPA |
+| Jakarta Persistence API | 3.1.0 | Spécification JPA |
+| PostgreSQL Driver | 42.7.7 | Driver JDBC |
+| Hibernate Validator | 8.0.1.Final | Bean Validation |
+| jBCrypt | 0.4 | Hachage mot de passe |
+| SLF4J | 2.0.16 | Logging |
+| Tomcat Embed | 10.1.50 | Serveur embarqué |
+| JUnit 5 | 5.11.0 | Tests |
+| Mockito | 5.14.2 | Mocks |
+| AssertJ | 3.27.3 | Assertions fluides |
+| H2 | 2.3.232 | Base de tests |
+| JaCoCo | 0.8.14 | Couverture de code |
 
-## 📊 Modèle de données
+## Modèle de données
 
-### Entités
+### User (`users`)
 
-- **User** : utilisateurs avec authentification
-- **Category** : catégories d'annonces
-- **Annonce** : annonces avec statut (DRAFT, PUBLISHED, ARCHIVED)
+| Champ | Type | Contraintes |
+|-------|------|-------------|
+| id | UUID | PK, auto-généré |
+| username | String (50) | unique, @NotBlank, @Size(3-50) |
+| email | String (100) | unique, @Email |
+| password | String (255) | @NotBlank, haché BCrypt |
+| createdAt | LocalDateTime | auto via @PrePersist |
+
+### Category (`category`)
+
+| Champ | Type | Contraintes |
+|-------|------|-------------|
+| id | UUID | PK, auto-généré |
+| label | String (50) | unique, @NotBlank |
+
+### Annonce (`annonce`)
+
+| Champ | Type | Contraintes |
+|-------|------|-------------|
+| id | UUID | PK, auto-généré |
+| title | String (64) | @NotBlank, @Size(max=64) |
+| description | String (256) | @NotBlank, @Size(max=256) |
+| adress | String (64) | @NotBlank, @Size(max=64) |
+| mail | String (64) | @Email, @Size(max=64) |
+| date | LocalDateTime | auto via @PrePersist / @PreUpdate |
+| status | AnnonceStatus | ENUM(DRAFT, PUBLISHED, ARCHIVED), default DRAFT |
+| author | User | @ManyToOne LAZY |
+| category | Category | @ManyToOne LAZY |
 
 ### Relations
 
-- `User` ←→ `Annonce` : OneToMany / ManyToOne
-- `Category` ←→ `Annonce` : OneToMany / ManyToOne
+- `User` 1 --- * `Annonce` (author)
+- `Category` 1 --- * `Annonce`
 
-## 🚀 Fonctionnalités
+### Cycle de vie des statuts
 
-### Authentification
-- Login / Logout avec gestion de session
-- Inscription avec validation
-- Filtre de sécurité protégeant les pages privées
+```
+DRAFT --[publish]--> PUBLISHED --[archive]--> ARCHIVED
+```
 
-### Gestion des annonces
-- CRUD complet
-- Recherche par mot-clé
-- Filtrage par catégorie et statut
-- Pagination des résultats
-- Actions Publish / Archive
+## Routes (Servlets)
 
-## ⚠️ Problèmes rencontrés et solutions
+| Méthode | URL | Servlet | Description | Auth requise |
+|---------|-----|---------|-------------|--------------|
+| GET | `/login` | LoginServlet | Formulaire de connexion | Non |
+| POST | `/login` | LoginServlet | Authentification | Non |
+| GET | `/register` | RegisterServlet | Formulaire d'inscription | Non |
+| POST | `/register` | RegisterServlet | Création de compte | Non |
+| GET | `/logout` | LogoutServlet | Déconnexion | Oui |
+| GET | `/AnnonceList` | AnnonceListServlet | Liste paginée (filtres: `q`, `category`, `status`, `author`) | Non |
+| GET | `/AnnonceDetail` | AnnonceDetailServlet | Détail annonce (`?id=UUID`) | Non |
+| GET | `/AnnonceAdd` | AnnonceAddServlet | Formulaire de création | Oui |
+| POST | `/AnnonceAdd` | AnnonceAddServlet | Créer une annonce | Oui |
+| GET | `/AnnoncePatch` | AnnoncePatchServlet | Formulaire de modification | Oui |
+| POST | `/AnnoncePatch` | AnnoncePatchServlet | Modifier / publier / archiver | Oui |
+| POST | `/AnnonceDelete` | AnnonceDeleteServlet | Supprimer une annonce | Oui |
 
-### 1. Configuration persistence.xml
+## Sécurité
 
-**Problème** : Les entités n'étaient pas détectées par Hibernate.
+- **Authentification** : session HTTP (`loggedUser`), timeout 30 min
+- **AuthenticationFilter** (`/*`) : protège toutes les routes sauf `/login`, `/logout`, `/register`, `/AnnonceList`, `/AnnonceDetail`, `/index.jsp` et les ressources statiques
+- **Mots de passe** : hachés avec BCrypt (12 rounds) via `PasswordUtils`
+- **EncodingFilter** (`/*`) : force UTF-8 sur toutes les requêtes/réponses
 
-**Solution** : Déclaration explicite des classes dans `persistence.xml` :
+## Validation & gestion des erreurs
+
+### Validation
+
+- **Bean Validation** : annotations `@NotBlank`, `@Size`, `@Email`, `@NotNull` sur les entités
+- **ValidationUtils** : validation côté servlet (title, description, adress, email, UUID)
+- **Côté client** : attributs HTML5 (`minlength`, `type="email"`, etc.)
+
+### Exceptions
+
+| Exception | Package | Usage |
+|-----------|---------|-------|
+| `ValidationException` | exception | Erreurs de validation (entrées utilisateur) |
+| `DatabaseException` | exception | Erreurs base de données |
+| `ServiceException` | service | Erreurs métier (doublons, contraintes) |
+| `RepositoryException` | repository | Erreurs d'accès aux données (entité introuvable) |
+
+### Pages d'erreur
+
+- **404** : `/WEB-INF/jsp/features/errors/pages/404.jsp`
+- **500** : `/WEB-INF/jsp/features/errors/pages/500.jsp`
+
+Les valeurs saisies sont conservées dans les formulaires en cas d'erreur.
+
+## Tests
+
+### Exécution
+
+```bash
+mvn test
+```
+
+### Couverture
+
+| Classe de test | Couche | Nombre de tests |
+|---------------|--------|-----------------|
+| JPAUtilTest | Utils | 4 |
+| EntityMappingTest | Model | 8 |
+| UserRepositoryTest | Repository | 5 |
+| AnnonceRepositoryTest | Repository | 12 |
+| CategoryServiceTest | Service | 4 |
+| AnnonceServiceTest | Service | 9 |
+| **Total** | | **42** |
+
+Les tests utilisent une base H2 in-memory (`create-drop`) et Mockito pour les mocks.
+
+### SonarQube
+
+```bash
+mvn sonar:sonar
+```
+
+Configuration dans `sonar-project.properties` (projet: `master-annonce`). Rapports JaCoCo générés automatiquement.
+
+## Scripts SQL
+
+Les scripts se trouvent dans le dossier `db/` :
+
+| Fichier | Description |
+|---------|-------------|
+| `db/init.sql` | Création du schéma (tables, index, extension pgcrypto) |
+| `db/seed.sql` | Données de test |
+
+### Données de test (seed.sql)
+
+| Donnée | Quantité | Détails |
+|--------|----------|---------|
+| **Utilisateurs** | 8 | admin, jean, marie, lucas, sophie, karim, claire, mehdi |
+| **Catégories** | 5 | Immobilier, Emploi, Services, Vehicules, Formation |
+| **Annonces** | 39 | 26 PUBLISHED, 7 DRAFT, 6 ARCHIVED |
+
+Mot de passe de tous les comptes : `password123` (pour les tests)
+
+## Commandes utiles
+
+```bash
+# Compiler
+mvn clean compile
+
+# Lancer les tests
+mvn test
+
+# Créer le WAR
+mvn package -DskipTests
+
+# Lancer Tomcat embarqué
+mvn cargo:run
+
+# Lancer PostgreSQL (Docker)
+docker-compose up -d
+
+# Reset complet de la base (Docker)
+docker-compose down -v && docker-compose up -d
+
+# SonarQube
+mvn sonar:sonar
+```
+
+## Problèmes rencontrés et solutions
+
+### 1. Entités non détectées par Hibernate
+
+**Problème** : Hibernate ne trouvait pas les entités au démarrage.
+
+**Solution** : Déclaration explicite dans `persistence.xml` :
 ```xml
 <class>org.example.tpj2eannonces.model.Annonce</class>
 <class>org.example.tpj2eannonces.model.User</class>
 <class>org.example.tpj2eannonces.model.Category</class>
 ```
 
-### 2. Gestion des transactions
+### 2. Transactions dans les servlets
 
-**Problème** : Ouverture de transactions dans les servlets menant à des fuites de ressources.
+**Problème** : Ouverture de transactions dans les servlets causant des fuites de ressources.
 
-**Solution** : Transactions gérées exclusivement dans la couche Service avec pattern try-catch-finally :
+**Solution** : Transactions gérées exclusivement dans la couche Service via `JPAUtil.inTransaction()` et `JPAUtil.inReadOnly()` avec commit/rollback automatique.
+
+### 3. LazyInitializationException
+
+**Problème** : Accès aux relations (`author`, `category`) après fermeture de l'EntityManager.
+
+**Solution** : Utilisation de `LEFT JOIN FETCH` dans les requêtes JPQL :
 ```java
-EntityManager em = JPAUtil.getEntityManager();
-try {
-    em.getTransaction().begin();
-    // ... opérations
-    em.getTransaction().commit();
-} catch (Exception e) {
-    if (em.getTransaction().isActive()) {
-        em.getTransaction().rollback();
-    }
-    throw e;
-} finally {
-    em.close();
-}
+"SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.id = :id"
 ```
 
-### 3. Lazy Loading et LazyInitializationException
+### 4. UUID comme clé primaire
 
-**Problème** : Accès aux relations après fermeture de l'EntityManager.
+**Problème** : Migration de l'existant vers JPA avec des UUID.
 
-**Solution** : Utilisation de `JOIN FETCH` dans les requêtes JPQL :
-```java
-String jpql = "SELECT a FROM Annonce a " +
-    "LEFT JOIN FETCH a.author " +
-    "LEFT JOIN FETCH a.category " +
-    "WHERE a.id = :id";
-```
+**Solution** : `@GeneratedValue(strategy = GenerationType.UUID)` pour la génération automatique et la compatibilité avec PostgreSQL.
 
-### 4. Type d'ID UUID vs Long
+### 5. Suppression de catégories avec annonces liées
 
-**Problème** : Migration de l'existant utilisant UUID vers JPA.
+**Problème** : Violation de contrainte d'intégrité référentielle.
 
-**Solution** : Conservation de UUID avec `@GeneratedValue(strategy = GenerationType.UUID)` pour compatibilité et éviter les collisions.
+**Solution** : Vérification dans `CategoryService.delete()` du nombre d'annonces liées avant suppression, avec message d'erreur explicite.
 
-### 5. Contraintes d'intégrité à la suppression
-
-**Problème** : Suppression de catégories avec des annonces liées.
-
-**Solution** : Vérification dans le service avant suppression :
-```java
-Long count = em.createQuery("SELECT COUNT(a) FROM Annonce a WHERE a.category.id = :id", Long.class)
-    .setParameter("id", categoryId)
-    .getSingleResult();
-if (count > 0) {
-    throw new ServiceException("Impossible de supprimer: " + count + " annonce(s) liée(s)");
-}
-```
-
-## 🧪 Tests
-
-### Exécution
-```bash
-mvn test
-```
-
-### Couverture
-- **EntityMappingTest** : Mapping JPA des entités (8 tests)
-- **AnnonceRepositoryTest** : CRUD et requêtes JPQL (13 tests)
-- **UserRepositoryTest** : Gestion utilisateurs (6 tests)
-- **AnnonceServiceTest** : Logique métier et transactions (9 tests)
-- **CategoryServiceTest** : Contraintes d'intégrité (4 tests)
-- **JPAUtilTest** : Configuration JPA (4 tests)
-
-**Total : 44 tests**
-
-## 📝 Configuration
-
-### Production (PostgreSQL)
-```properties
-# application.properties
-db.url=jdbc:postgresql://localhost:5432/MasterAnnonce
-db.user=postgres
-db.password=postgres
-```
-
-### Tests (H2)
-Configuration automatique via `src/test/resources/META-INF/persistence.xml` avec base H2 in-memory.
-
-## 🚀 Déploiement
-
-### Prérequis
-- **Java 21** ou supérieur
-- **Maven 3.8+**
-- **PostgreSQL 14+**
-- **Apache Tomcat 10.1+** (compatible Jakarta EE 10)
-
-### Configuration de la base de données
-
-1. Créer la base de données PostgreSQL :
-```sql
-CREATE DATABASE MasterAnnonce;
-CREATE USER postgres WITH PASSWORD 'postgres';
-GRANT ALL PRIVILEGES ON DATABASE MasterAnnonce TO postgres;
-```
-
-2. Configurer `src/main/resources/application.properties` :
-```properties
-db.url=jdbc:postgresql://localhost:5432/MasterAnnonce
-db.user=postgres
-db.password=postgres
-```
-
-### Compilation et packaging
-
-```bash
-# Nettoyer et compiler
-mvn clean compile
-
-# Exécuter les tests
-mvn test
-
-# Créer le WAR
-mvn package -DskipTests
-```
-
-### Déploiement sur Tomcat
-
-1. **Copier le WAR** :
-```bash
-cp target/MasterAnnonce.war $CATALINA_HOME/webapps/
-```
-
-2. **Démarrer Tomcat** :
-```bash
-$CATALINA_HOME/bin/startup.sh  # Linux/Mac
-$CATALINA_HOME/bin/startup.bat # Windows
-```
-
-3. **Accéder à l'application** :
-```
-http://localhost:8080/MasterAnnonce/
-```
-
-### Déploiement avec Docker (optionnel)
-
-```bash
-# Build de l'image
-docker build -t masterannonce .
-
-# Lancer avec docker-compose
-docker-compose up -d
-```
-
-### Variables d'environnement
-
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `DB_URL` | URL JDBC PostgreSQL | `jdbc:postgresql://localhost:5432/MasterAnnonce` |
-| `DB_USER` | Utilisateur BDD | `postgres` |
-| `DB_PASSWORD` | Mot de passe BDD | `postgres` |
-
-## 📁 Structure des fichiers clés
+## Structure complète du projet
 
 ```
-persistence.xml          # Configuration JPA
-├── src/main/resources/META-INF/   (PostgreSQL)
-└── src/test/resources/META-INF/   (H2)
-
-JPAUtil.java            # Singleton EntityManagerFactory
-GenericRepository.java  # Repository générique CRUD
-AnnonceService.java     # Service métier avec transactions
-AuthenticationFilter.java  # Filtre de sécurité
+TP-J2E/
+├── db/
+│   ├── init.sql
+│   └── seed.sql
+├── src/
+│   ├── main/
+│   │   ├── java/org/example/tpj2eannonces/
+│   │   │   ├── config/
+│   │   │   │   └── AppContextListener.java
+│   │   │   ├── exception/
+│   │   │   │   ├── DatabaseException.java
+│   │   │   │   └── ValidationException.java
+│   │   │   ├── filter/
+│   │   │   │   ├── AuthenticationFilter.java
+│   │   │   │   └── EncodingFilter.java
+│   │   │   ├── model/
+│   │   │   │   ├── Annonce.java
+│   │   │   │   ├── AnnonceStatus.java
+│   │   │   │   ├── Category.java
+│   │   │   │   └── User.java
+│   │   │   ├── repository/
+│   │   │   │   ├── GenericRepository.java
+│   │   │   │   ├── AnnonceRepository.java
+│   │   │   │   ├── CategoryRepository.java
+│   │   │   │   ├── RepositoryException.java
+│   │   │   │   └── UserRepository.java
+│   │   │   ├── service/
+│   │   │   │   ├── AnnonceService.java
+│   │   │   │   ├── CategoryService.java
+│   │   │   │   ├── ServiceException.java
+│   │   │   │   └── UserService.java
+│   │   │   ├── servlet/
+│   │   │   │   ├── BaseServlet.java
+│   │   │   │   ├── annonce/
+│   │   │   │   │   ├── AnnonceAddServlet.java
+│   │   │   │   │   ├── AnnonceDeleteServlet.java
+│   │   │   │   │   ├── AnnonceDetailServlet.java
+│   │   │   │   │   ├── AnnonceListServlet.java
+│   │   │   │   │   └── AnnoncePatchServlet.java
+│   │   │   │   └── auth/
+│   │   │   │       ├── LoginServlet.java
+│   │   │   │       ├── LogoutServlet.java
+│   │   │   │       └── RegisterServlet.java
+│   │   │   └── utils/
+│   │   │       ├── JPAUtil.java
+│   │   │       ├── PasswordUtils.java
+│   │   │       └── ValidationUtils.java
+│   │   ├── resources/
+│   │   │   ├── application.properties
+│   │   │   └── META-INF/
+│   │   │       └── persistence.xml
+│   │   └── webapp/
+│   │       ├── index.jsp
+│   │       └── WEB-INF/
+│   │           ├── web.xml
+│   │           └── jsp/
+│   │               ├── layout/
+│   │               │   ├── header.jsp
+│   │               │   └── footer.jsp
+│   │               └── features/
+│   │                   ├── annonce/pages/
+│   │                   │   ├── list.jsp
+│   │                   │   ├── detail.jsp
+│   │                   │   ├── add.jsp
+│   │                   │   └── update.jsp
+│   │                   ├── auth/pages/
+│   │                   │   ├── login.jsp
+│   │                   │   └── register.jsp
+│   │                   └── errors/pages/
+│   │                       ├── 404.jsp
+│   │                       └── 500.jsp
+│   └── test/
+│       ├── java/org/example/tpj2eannonces/
+│       │   ├── model/EntityMappingTest.java
+│       │   ├── repository/
+│       │   │   ├── AnnonceRepositoryTest.java
+│       │   │   └── UserRepositoryTest.java
+│       │   ├── service/
+│       │   │   ├── AnnonceServiceTest.java
+│       │   │   └── CategoryServiceTest.java
+│       │   └── utils/JPAUtilTest.java
+│       └── resources/META-INF/persistence.xml
+├── docker-compose.yml
+├── pom.xml
+└── sonar-project.properties
 ```

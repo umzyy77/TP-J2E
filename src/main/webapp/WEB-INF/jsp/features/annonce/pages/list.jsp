@@ -31,19 +31,10 @@
             </c:if>
         </div>
 
-        <form method="get" action="${pageContext.request.contextPath}/AnnonceList" class="flex items-center gap-2">
-            <input type="text" name="q" value="${requestScope.searchQuery}"
-                placeholder="Rechercher par mot-clé..."
-                class="h-9 w-64 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm placeholder:text-zinc-400" />
-            <button type="submit"
-                class="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-3 text-sm font-medium text-white shadow transition-colors hover:bg-zinc-800">
-                Rechercher
-            </button>
-            <c:if test="${not empty requestScope.searchQuery}">
-                <a href="${pageContext.request.contextPath}/AnnonceList"
-                   class="text-sm text-zinc-500 hover:underline">Effacer</a>
-            </c:if>
-        </form>
+        <ui:searchBar action="${pageContext.request.contextPath}/AnnonceList"
+            value="${requestScope.searchQuery}"
+            placeholder="Rechercher par mot-clé..."
+            clearUrl="${pageContext.request.contextPath}/AnnonceList" />
 
         <div class="flex flex-wrap items-center gap-4">
             <annonce:categoryFilter categories="${requestScope.categories}" selectedCategory="${requestScope.selectedCategory}" />
