@@ -94,8 +94,9 @@ class AnnonceServiceTest {
     void createWithInvalidAuthor_shouldThrowException() {
         UUID invalidAuthorId = UUID.randomUUID();
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
+        Long categoryId = defaultCategory.getId();
 
-        assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, defaultCategory.getId()))
+        assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, categoryId))
                 .isInstanceOf(RepositoryException.class)
                 .hasMessageContaining("Auteur non trouve");
     }
@@ -123,8 +124,9 @@ class AnnonceServiceTest {
     @Test
     void archiveFromDraft_shouldFail() {
         Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
+        Long annonceId = annonce.getId();
 
-        assertThatThrownBy(() -> annonceService.changeStatus(annonce.getId(), "archive"))
+        assertThatThrownBy(() -> annonceService.changeStatus(annonceId, "archive"))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("Transition invalide");
     }
@@ -148,7 +150,7 @@ class AnnonceServiceTest {
         List<Annonce> result = annonceService.findAllPublished(0, 10);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getTitle()).isEqualTo("Published");
+        assertThat(result.getFirst().getTitle()).isEqualTo("Published");
     }
 
     @Test

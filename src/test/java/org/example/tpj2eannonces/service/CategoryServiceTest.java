@@ -41,15 +41,12 @@ class CategoryServiceTest {
     }
 
     private void cleanDatabase() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             em.createQuery("DELETE FROM Annonce").executeUpdate();
             em.createQuery("DELETE FROM User").executeUpdate();
             em.createQuery("DELETE FROM Category").executeUpdate();
             em.getTransaction().commit();
-        } finally {
-            em.close();
         }
     }
 
@@ -66,8 +63,9 @@ class CategoryServiceTest {
     @Test
     void create_shouldRejectDuplicates() {
         service.create(new Category("Immobilier"));
+        Category duplicateCategory = new Category("Immobilier");
 
-        assertThatThrownBy(() -> service.create(new Category("Immobilier")))
+        assertThatThrownBy(() -> service.create(duplicateCategory))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("existe");
     }
@@ -75,23 +73,21 @@ class CategoryServiceTest {
     @Test
     void delete_shouldPreventIfAnnoncesExist() {
         Category category = service.create(new Category("Immobilier"));
+        Long categoryId = category.getId();
 
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
             em.getTransaction().begin();
             User author = new User("catowner", "catowner@test.com", "password");
             em.persist(author);
 
             Annonce annonce = new Annonce("Test", "Desc", "Addr", "mail@test.com");
             annonce.setAuthor(author);
-            annonce.setCategory(em.find(Category.class, category.getId()));
+            annonce.setCategory(em.find(Category.class, categoryId));
             em.persist(annonce);
             em.getTransaction().commit();
-        } finally {
-            em.close();
         }
 
-        assertThatThrownBy(() -> service.delete(category.getId()))
+        assertThatThrownBy(() -> service.delete(categoryId))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("annonce(s)");
     }

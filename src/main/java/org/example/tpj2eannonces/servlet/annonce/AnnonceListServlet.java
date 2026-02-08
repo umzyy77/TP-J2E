@@ -1,13 +1,15 @@
 package org.example.tpj2eannonces.servlet.annonce;
 
-import java.util.List;
 import java.util.UUID;
 
-import org.example.tpj2eannonces.model.Annonce;
+import org.example.tpj2eannonces.dtos.AnnonceListDTO;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.service.AnnonceService;
 import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.servlet.BaseServlet;
+import org.example.tpj2eannonces.utils.ConditionalResolver;
+import org.example.tpj2eannonces.utils.PaginationUtils;
+import org.example.tpj2eannonces.utils.RequestParamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,62 +34,28 @@ public class AnnonceListServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         try {
-            int page = getPageParam(request);
+            int page = RequestParamUtils.parseNonNegativeInt(request.getParameter("page"), 0);
             String authorParam = request.getParameter("author");
             String categoryParam = request.getParameter("category");
             String statusParam = request.getParameter("status");
-            String searchParam = request.getParameter("q");
+            String searchQuery = RequestParamUtils.normalizeBlankToNull(request.getParameter("q"));
 
-            List<Annonce> annonces;
-            long totalCount;
-
-            if (searchParam != null && !searchParam.isBlank()) {
-                annonces = annonceService.search(searchParam.trim(), page, PAGE_SIZE);
-                totalCount = annonceService.countByKeyword(searchParam.trim());
-                request.setAttribute("searchQuery", searchParam.trim());
-            } else if (authorParam != null && !authorParam.isEmpty()) {
-                UUID authorId = UUID.fromString(authorParam);
-                annonces = annonceService.findByAuthor(authorId, page, PAGE_SIZE);
-                totalCount = annonceService.countByAuthor(authorId);
-                request.setAttribute("filterByAuthor", true);
-            } else if (categoryParam != null && !categoryParam.isEmpty()) {
-                Long categoryId = Long.parseLong(categoryParam);
-                annonces = annonceService.findByCategory(categoryId, page, PAGE_SIZE);
-                totalCount = annonceService.countByCategory(categoryId);
-                request.setAttribute("filterByCategory", true);
-                request.setAttribute("selectedCategory", categoryParam);
-            } else if (statusParam != null && !statusParam.isEmpty()) {
-                AnnonceStatus status = AnnonceStatus.valueOf(statusParam);
-                annonces = annonceService.findByStatus(status, page, PAGE_SIZE);
-                totalCount = annonceService.countByStatus(status);
-                request.setAttribute("filterByStatus", true);
-                request.setAttribute("selectedStatus", statusParam);
-            } else {
-                annonces = annonceService.findAll(page, PAGE_SIZE);
-                totalCount = annonceService.count();
-            }
-
-            String baseUrl = request.getContextPath() + "/AnnonceList?_=1";
-            if (searchParam != null && !searchParam.isBlank()) {
-                baseUrl += "&q=" + searchParam.trim();
-            }
-            if (authorParam != null && !authorParam.isEmpty()) {
-                baseUrl += "&author=" + authorParam;
-            }
-            if (categoryParam != null && !categoryParam.isEmpty()) {
-                baseUrl += "&category=" + categoryParam;
-            }
-            if (statusParam != null && !statusParam.isEmpty()) {
-                baseUrl += "&status=" + statusParam;
-            }
+            AnnonceListDTO listData = loadAnnonceListData(
+                    request, page, searchQuery, authorParam, categoryParam, statusParam);
+            String baseUrl = PaginationUtils.buildBaseUrl(
+                    request.getContextPath(), "/AnnonceList",
+                    new PaginationUtils.QueryParam("q", searchQuery),
+                    new PaginationUtils.QueryParam("author", authorParam),
+                    new PaginationUtils.QueryParam("category", categoryParam),
+                    new PaginationUtils.QueryParam("status", statusParam));
 
             request.setAttribute("categories", categoryService.findAll());
             request.setAttribute("statuses", AnnonceStatus.values());
-            request.setAttribute("annonceList", annonces);
-            request.setAttribute("annonceCount", totalCount);
+            request.setAttribute("annonceList", listData.annonces());
+            request.setAttribute("annonceCount", listData.totalCount());
             request.setAttribute("currentPage", page);
             request.setAttribute("pageSize", PAGE_SIZE);
-            request.setAttribute("totalPages", (int) Math.ceil((double) totalCount / PAGE_SIZE));
+            request.setAttribute("totalPages", (int) Math.ceil((double) listData.totalCount() / PAGE_SIZE));
             request.setAttribute("paginationBaseUrl", baseUrl);
 
             forwardTo(request, response, VIEW_LIST);
@@ -100,15 +68,58 @@ public class AnnonceListServlet extends BaseServlet {
         }
     }
 
-    private int getPageParam(HttpServletRequest request) {
-        String pageStr = request.getParameter("page");
-        if (pageStr != null) {
-            try {
-                return Math.max(0, Integer.parseInt(pageStr));
-            } catch (NumberFormatException _) {
-                return 0;
-            }
-        }
-        return 0;
+    private AnnonceListDTO loadAnnonceListData(
+            HttpServletRequest request, int page, String searchQuery,
+            String authorParam, String categoryParam, String statusParam) {
+        return ConditionalResolver.resolve(
+                () -> loadDefaultData(page),
+                new ConditionalResolver.Rule<>(() -> searchQuery != null, () -> loadSearchData(request, page, searchQuery)),
+                new ConditionalResolver.Rule<>(
+                        () -> RequestParamUtils.hasValue(authorParam),
+                        () -> loadAuthorData(request, page, authorParam)),
+                new ConditionalResolver.Rule<>(
+                        () -> RequestParamUtils.hasValue(categoryParam),
+                        () -> loadCategoryData(request, page, categoryParam)),
+                new ConditionalResolver.Rule<>(
+                        () -> RequestParamUtils.hasValue(statusParam),
+                        () -> loadStatusData(request, page, statusParam)));
     }
+
+    private AnnonceListDTO loadSearchData(HttpServletRequest request, int page, String searchQuery) {
+        request.setAttribute("searchQuery", searchQuery);
+        return new AnnonceListDTO(
+                annonceService.search(searchQuery, page, PAGE_SIZE),
+                annonceService.countByKeyword(searchQuery));
+    }
+
+    private AnnonceListDTO loadAuthorData(HttpServletRequest request, int page, String authorParam) {
+        UUID authorId = UUID.fromString(authorParam);
+        request.setAttribute("filterByAuthor", true);
+        return new AnnonceListDTO(
+                annonceService.findByAuthor(authorId, page, PAGE_SIZE),
+                annonceService.countByAuthor(authorId));
+    }
+
+    private AnnonceListDTO loadCategoryData(HttpServletRequest request, int page, String categoryParam) {
+        Long categoryId = Long.parseLong(categoryParam);
+        request.setAttribute("filterByCategory", true);
+        request.setAttribute("selectedCategory", categoryParam);
+        return new AnnonceListDTO(
+                annonceService.findByCategory(categoryId, page, PAGE_SIZE),
+                annonceService.countByCategory(categoryId));
+    }
+
+    private AnnonceListDTO loadStatusData(HttpServletRequest request, int page, String statusParam) {
+        AnnonceStatus status = AnnonceStatus.valueOf(statusParam);
+        request.setAttribute("filterByStatus", true);
+        request.setAttribute("selectedStatus", statusParam);
+        return new AnnonceListDTO(
+                annonceService.findByStatus(status, page, PAGE_SIZE),
+                annonceService.countByStatus(status));
+    }
+
+    private AnnonceListDTO loadDefaultData(int page) {
+        return new AnnonceListDTO(annonceService.findAll(page, PAGE_SIZE), annonceService.count());
+    }
+
 }
