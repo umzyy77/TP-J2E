@@ -1,13 +1,25 @@
 package org.example.tpj2eannonces.servlet;
 
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
+
+import org.example.tpj2eannonces.exception.ValidationException;
+import org.example.tpj2eannonces.model.OwnableByUser;
+import org.example.tpj2eannonces.model.User;
+import org.example.tpj2eannonces.servlet.auth.LoginServlet;
+import org.slf4j.Logger;
+
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
+import jakarta.servlet.http.HttpSession;
 
 public abstract class BaseServlet extends HttpServlet {
-    protected static final String VIEW_404 = "/WEB-INF/jsp/errors/404.jsp";
-    protected static final String VIEW_500 = "/WEB-INF/jsp/errors/500.jsp";
+    protected static final String VIEW_404 = "/WEB-INF/jsp/features/errors/pages/404.jsp";
+    protected static final String VIEW_500 = "/WEB-INF/jsp/features/errors/pages/500.jsp";
     protected static final String ATTR_MESSAGE = "message";
 
     protected abstract Logger getLogger();
@@ -15,7 +27,7 @@ public abstract class BaseServlet extends HttpServlet {
     protected void forwardTo(HttpServletRequest request, HttpServletResponse response, String view) {
         try {
             request.getRequestDispatcher(view).forward(request, response);
-        } catch (Exception e) {
+        } catch (ServletException | IOException e) {
             handleError(response, e);
         }
     }
@@ -23,7 +35,7 @@ public abstract class BaseServlet extends HttpServlet {
     protected void redirectTo(HttpServletResponse response, String url) {
         try {
             response.sendRedirect(url);
-        } catch (Exception e) {
+        } catch (IOException e) {
             handleError(response, e);
         }
     }
@@ -42,8 +54,51 @@ public abstract class BaseServlet extends HttpServlet {
         getLogger().error("Erreur inattendue dans {}", getClass().getSimpleName(), e);
         try {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        } catch (Exception _) {
-            // Impossible de répondre au client
+        } catch (IOException _) {
+            // Impossible de repondre au client
+        }
+    }
+
+    protected UUID requireLoggedUserId(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute(LoginServlet.SESSION_USER) == null) {
+            throw new ValidationException("Authentification requise");
+        }
+        User user = (User) session.getAttribute(LoginServlet.SESSION_USER);
+        return user.getId();
+    }
+
+    protected <T extends OwnableByUser> boolean isNotOwnedBy(T resource, UUID loggedUserId) {
+        if (resource == null || loggedUserId == null) {
+            return true;
+        }
+        UUID ownerId = resource.getOwnerId();
+        return ownerId == null || !ownerId.equals(loggedUserId);
+    }
+
+    protected <T extends OwnableByUser, I> Optional<T> requireOwnedResource(
+            HttpServletRequest request, HttpServletResponse response,
+            Function<String, I> idValidator,
+            Function<I, Optional<T>> finder) {
+        I id = idValidator.apply(request.getParameter("id"));
+        UUID loggedUserId = requireLoggedUserId(request);
+        Optional<T> resourceOpt = finder.apply(id);
+        if (resourceOpt.isEmpty()) {
+            forwardTo(request, response, VIEW_404);
+            return Optional.empty();
+        }
+        if (isNotOwnedBy(resourceOpt.get(), loggedUserId)) {
+            sendForbidden(response);
+            return Optional.empty();
+        }
+        return resourceOpt;
+    }
+
+    protected void sendForbidden(HttpServletResponse response) {
+        try {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+        } catch (IOException e) {
+            handleError(response, e);
         }
     }
 }

@@ -2,7 +2,7 @@ package org.example.tpj2eannonces.utils;
 
 import org.example.tpj2eannonces.exception.ValidationException;
 
-import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class ValidationUtils {
@@ -62,16 +62,24 @@ public final class ValidationUtils {
         return value;
     }
 
-    public static UUID validateId(String idValue) {
+    public static <I> I validateId(String idValue, Function<String, I> parser) {
         String value = normalize(idValue);
         if (value.isEmpty()) {
             throw new ValidationException("Identifiant manquant");
         }
         try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException _) {
+            return parser.apply(value);
+        } catch (Exception _) {
             throw new ValidationException("Identifiant invalide");
         }
+    }
+
+    public static Long validateLongId(String idValue) {
+        Long id = validateId(idValue, Long::parseLong);
+        if (id <= 0) {
+            throw new ValidationException("Identifiant invalide");
+        }
+        return id;
     }
 
     private static String normalize(String value) {

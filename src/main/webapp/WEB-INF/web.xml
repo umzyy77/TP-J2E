@@ -9,10 +9,10 @@
 
     <error-page>
         <error-code>404</error-code>
-        <location>/WEB-INF/jsp/errors/404.jsp</location>
+        <location>/WEB-INF/jsp/features/errors/pages/404.jsp</location>
     </error-page>
     <error-page>
         <error-code>500</error-code>
-        <location>/WEB-INF/jsp/errors/500.jsp</location>
+        <location>/WEB-INF/jsp/features/errors/pages/500.jsp</location>
     </error-page>
 </web-app>

@@ -1,6 +1,6 @@
 <%@ tag pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="ui" tagdir="/WEB-INF/tags/ui" %>
+<%@ taglib prefix="ui" tagdir="/WEB-INF/tags/shared/ui" %>
 <%@ attribute name="title" required="false" %>
 
 <!DOCTYPE html>
@@ -38,5 +38,7 @@
 </div>
 
 <ui:dialog />
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>
