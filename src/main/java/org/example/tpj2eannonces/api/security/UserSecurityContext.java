@@ -23,9 +23,7 @@ public class UserSecurityContext implements SecurityContext {
     public UserSecurityContext(Subject subject, boolean secure) {
         this.subject = subject;
         this.secure = secure;
-        this.principal = subject.getPrincipals().stream()
-                .filter(p -> p instanceof UserPrincipal)
-                .map(p -> (UserPrincipal) p)
+        this.principal = subject.getPrincipals(UserPrincipal.class).stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("UserPrincipal absent du Subject JAAS"));
     }
@@ -37,8 +35,7 @@ public class UserSecurityContext implements SecurityContext {
 
     @Override
     public boolean isUserInRole(String role) {
-        return subject.getPrincipals().stream()
-                .filter(p -> p instanceof RolePrincipal)
+        return subject.getPrincipals(RolePrincipal.class).stream()
                 .anyMatch(p -> p.getName().equals(role));
     }
 

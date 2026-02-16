@@ -2,8 +2,6 @@ package org.example.tpj2eannonces.api.security;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.security.Principal;
-import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
@@ -73,10 +71,7 @@ public class SecurityFilter implements ContainerRequestFilter {
     }
 
     private UserPrincipal extractUserPrincipal(Subject subject) {
-        Set<Principal> principals = subject.getPrincipals();
-        return principals.stream()
-                .filter(p -> p instanceof UserPrincipal)
-                .map(p -> (UserPrincipal) p)
+        return subject.getPrincipals(UserPrincipal.class).stream()
                 .findFirst()
                 .orElseThrow();
     }

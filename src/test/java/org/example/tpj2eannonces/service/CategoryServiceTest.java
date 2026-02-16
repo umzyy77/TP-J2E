@@ -103,4 +103,41 @@ class CategoryServiceTest {
         assertThat(found).isPresent();
         assertThat(found.get().getLabel()).isEqualTo("Auto");
     }
+
+    @Test
+    void findById_shouldReturnCategory() {
+        Category created = service.create(new Category("Formation"));
+
+        var found = service.findById(created.getId());
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getLabel()).isEqualTo("Formation");
+    }
+
+    @Test
+    void findById_shouldReturnEmptyForNonexistent() {
+        var found = service.findById(99999L);
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    void findAll_shouldReturnAllCategories() {
+        service.create(new Category("Immobilier"));
+        service.create(new Category("Auto"));
+        service.create(new Category("Services"));
+
+        var all = service.findAll();
+
+        assertThat(all).hasSize(3);
+    }
+
+    @Test
+    void delete_shouldRemoveCategoryWithoutAnnonces() {
+        Category created = service.create(new Category("ToDelete"));
+
+        boolean deleted = service.delete(created.getId());
+
+        assertThat(deleted).isTrue();
+        assertThat(service.findById(created.getId())).isEmpty();
+    }
 }

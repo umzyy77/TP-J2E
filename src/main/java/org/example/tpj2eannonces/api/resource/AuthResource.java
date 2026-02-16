@@ -1,8 +1,5 @@
 package org.example.tpj2eannonces.api.resource;
 
-import java.security.Principal;
-import java.util.Set;
-
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
@@ -62,10 +59,7 @@ public class AuthResource {
     }
 
     private UserPrincipal extractUserPrincipal(Subject subject) {
-        Set<Principal> principals = subject.getPrincipals();
-        return principals.stream()
-                .filter(p -> p instanceof UserPrincipal)
-                .map(p -> (UserPrincipal) p)
+        return subject.getPrincipals(UserPrincipal.class).stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("UserPrincipal absent du Subject JAAS"));
     }

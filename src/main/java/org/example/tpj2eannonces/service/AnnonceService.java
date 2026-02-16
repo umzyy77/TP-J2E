@@ -17,6 +17,8 @@ import org.example.tpj2eannonces.utils.JPAUtil;
 
 public class AnnonceService {
 
+    private static final String ANNONCE_NOT_FOUND = "Annonce non trouvee: ";
+
     private final AnnonceRepository repository;
 
     public AnnonceService() {
@@ -39,7 +41,7 @@ public class AnnonceService {
                                 String adress, String mail, Long categoryId) {
         return JPAUtil.inTransaction(em -> {
             Annonce existing = repository.findById(em, annonceId)
-                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+                    .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
             checkOwnership(existing, currentUserId);
 
@@ -67,7 +69,7 @@ public class AnnonceService {
     public Annonce changeStatus(Long annonceId, UUID currentUserId, String action) {
         return JPAUtil.inTransaction(em -> {
             Annonce annonce = repository.findById(em, annonceId)
-                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+                    .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
             checkOwnership(annonce, currentUserId);
 
@@ -90,7 +92,7 @@ public class AnnonceService {
     public boolean delete(Long annonceId, UUID currentUserId) {
         return JPAUtil.inTransaction(em -> {
             Annonce existing = repository.findById(em, annonceId)
-                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+                    .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
             checkOwnership(existing, currentUserId);
 

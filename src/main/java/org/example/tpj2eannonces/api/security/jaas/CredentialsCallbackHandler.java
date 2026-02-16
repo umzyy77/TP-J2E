@@ -21,12 +21,11 @@ public class CredentialsCallbackHandler implements CallbackHandler {
     @Override
     public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
         for (Callback callback : callbacks) {
-            if (callback instanceof NameCallback nameCallback) {
-                nameCallback.setName(username);
-            } else if (callback instanceof PasswordCallback passwordCallback) {
-                passwordCallback.setPassword(password);
-            } else {
-                throw new UnsupportedCallbackException(callback, "Callback non supporte: " + callback.getClass().getName());
+            switch (callback) {
+                case NameCallback nameCallback -> nameCallback.setName(username);
+                case PasswordCallback passwordCallback -> passwordCallback.setPassword(password);
+                default -> throw new UnsupportedCallbackException(callback,
+                        "Callback non supporte: " + callback.getClass().getName());
             }
         }
     }
