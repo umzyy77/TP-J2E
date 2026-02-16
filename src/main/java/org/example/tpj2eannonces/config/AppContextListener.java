@@ -1,5 +1,7 @@
 package org.example.tpj2eannonces.config;
 
+import java.net.URL;
+
 import org.example.tpj2eannonces.utils.JPAUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +17,27 @@ public class AppContextListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
+        initJaas();
+
         logger.info("Démarrage de l'application - initialisation de JPA...");
         JPAUtil.getEntityManagerFactory();
         logger.info("JPA initialisé avec succès.");
+    }
+
+    private void initJaas() {
+        String existing = System.getProperty("java.security.auth.login.config");
+        if (existing != null) {
+            logger.info("Configuration JAAS deja definie via JVM: {}", existing);
+            return;
+        }
+
+        URL jaasConfig = getClass().getClassLoader().getResource("jaas.conf");
+        if (jaasConfig != null) {
+            System.setProperty("java.security.auth.login.config", jaasConfig.toExternalForm());
+            logger.info("Configuration JAAS chargee: {}", jaasConfig.toExternalForm());
+        } else {
+            logger.warn("Fichier jaas.conf introuvable dans le classpath");
+        }
     }
 
     @Override

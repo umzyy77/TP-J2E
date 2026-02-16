@@ -2,23 +2,32 @@ package org.example.tpj2eannonces.api.security;
 
 import java.security.Principal;
 
+import javax.security.auth.Subject;
+
+import org.example.tpj2eannonces.api.security.jaas.RolePrincipal;
+
 import jakarta.ws.rs.core.SecurityContext;
 
 /**
  * SecurityContext JAX-RS custom qui propage l'identite de l'utilisateur
- * authentifie via token Bearer a travers toute la chaine de traitement.
+ * authentifie via JAAS a travers toute la chaine de traitement.
  *
- * C'est le mecanisme standard JAX-RS pour acceder a l'utilisateur
- * courant dans les resources via {@code @Context SecurityContext}.
+ * Construit a partir du Subject JAAS contenant UserPrincipal et RolePrincipal.
  */
 public class UserSecurityContext implements SecurityContext {
 
+    private final Subject subject;
     private final UserPrincipal principal;
     private final boolean secure;
 
-    public UserSecurityContext(TokenInfo tokenInfo, boolean secure) {
-        this.principal = new UserPrincipal(tokenInfo.userId(), tokenInfo.username());
+    public UserSecurityContext(Subject subject, boolean secure) {
+        this.subject = subject;
         this.secure = secure;
+        this.principal = subject.getPrincipals().stream()
+                .filter(p -> p instanceof UserPrincipal)
+                .map(p -> (UserPrincipal) p)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("UserPrincipal absent du Subject JAAS"));
     }
 
     @Override
@@ -28,7 +37,9 @@ public class UserSecurityContext implements SecurityContext {
 
     @Override
     public boolean isUserInRole(String role) {
-        return false;
+        return subject.getPrincipals().stream()
+                .filter(p -> p instanceof RolePrincipal)
+                .anyMatch(p -> p.getName().equals(role));
     }
 
     @Override
@@ -39,5 +50,9 @@ public class UserSecurityContext implements SecurityContext {
     @Override
     public String getAuthenticationScheme() {
         return "Bearer";
+    }
+
+    public Subject getSubject() {
+        return subject;
     }
 }

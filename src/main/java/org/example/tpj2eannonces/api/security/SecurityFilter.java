@@ -2,8 +2,17 @@ package org.example.tpj2eannonces.api.security;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.security.Principal;
+import java.util.Set;
+
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
 
 import org.example.tpj2eannonces.api.dto.common.ApiErrorDTO;
+import org.example.tpj2eannonces.api.security.jaas.TokenCallbackHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.Priority;
 import jakarta.annotation.security.PermitAll;
@@ -20,13 +29,12 @@ import jakarta.ws.rs.ext.Provider;
 @Priority(Priorities.AUTHENTICATION)
 public class SecurityFilter implements ContainerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityFilter.class);
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
     @Context
     private ResourceInfo resourceInfo;
-
-    private final TokenStore tokenStore = TokenStore.getInstance();
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -46,13 +54,31 @@ public class SecurityFilter implements ContainerRequestFilter {
         }
 
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-
         boolean isSecure = "https".equalsIgnoreCase(requestContext.getUriInfo().getRequestUri().getScheme());
 
-        tokenStore.validate(token).ifPresentOrElse(
-                info -> requestContext.setSecurityContext(new UserSecurityContext(info, isSecure)),
-                () -> abort(requestContext, "Token invalide ou expiré")
-        );
+        try {
+            LoginContext lc = new LoginContext("MasterAnnonceToken", new TokenCallbackHandler(token));
+            lc.login();
+
+            Subject subject = lc.getSubject();
+            requestContext.setSecurityContext(new UserSecurityContext(subject, isSecure));
+
+            logger.debug("Authentification JAAS token reussie pour: {}",
+                    extractUserPrincipal(subject).getName());
+
+        } catch (LoginException e) {
+            logger.debug("Echec validation token JAAS: {}", e.getMessage());
+            abort(requestContext, "Token invalide ou expiré");
+        }
+    }
+
+    private UserPrincipal extractUserPrincipal(Subject subject) {
+        Set<Principal> principals = subject.getPrincipals();
+        return principals.stream()
+                .filter(p -> p instanceof UserPrincipal)
+                .map(p -> (UserPrincipal) p)
+                .findFirst()
+                .orElseThrow();
     }
 
     private void abort(ContainerRequestContext requestContext, String message) {

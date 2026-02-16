@@ -196,6 +196,7 @@
                     <systemPropertyVariables>
                         <tpj2e.persistence.unit>MasterAnnonceTestPU</tpj2e.persistence.unit>
                         <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+                        <java.security.auth.login.config>${project.basedir}/src/main/resources/jaas.conf</java.security.auth.login.config>
                     </systemPropertyVariables>
                     <includes>
                         <include>**/*Test.java</include>

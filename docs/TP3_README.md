@@ -475,6 +475,109 @@ DRAFT --[publish]--> PUBLISHED --[archive]--> ARCHIVED --[delete]--> supprime
   |  DELETE interdit     |  DELETE interdit       |
 ```
 
+### Bonus Exercice 5 - Authentification JAAS
+
+#### Pourquoi JAAS ?
+
+JAAS (Java Authentication and Authorization Service) est l'API standard Java pour gerer l'authentification et l'autorisation de maniere modulaire. Dans notre contexte REST stateless, JAAS apporte :
+
+1. **Separation des mecanismes d'authentification** : chaque strategie (login DB, validation token) est encapsulee dans un `LoginModule` independant.
+2. **Subject standard** : apres authentification, l'identite est portee par un `Subject` JAAS contenant des `Principal` (identite + roles), exploitable dans toute la couche metier.
+3. **Configuration declarative** : le fichier `jaas.conf` permet de changer de strategie d'authentification sans modifier le code.
+
+#### Architecture JAAS
+
+```
+jaas.conf
+├── MasterAnnonceLogin   -> DbLoginModule (username/password)
+└── MasterAnnonceToken   -> TokenLoginModule (Bearer token)
+```
+
+#### 5.1 - Configuration JAAS
+
+**Fichier** : `src/main/resources/jaas.conf`
+
+Deux domaines JAAS :
+- `MasterAnnonceLogin` : utilise `DbLoginModule` pour l'authentification par credentials
+- `MasterAnnonceToken` : utilise `TokenLoginModule` pour la validation de token
+
+**Chargement** : La propriete systeme `java.security.auth.login.config` est configuree :
+- Automatiquement via `AppContextListener.initJaas()` au demarrage de l'application
+- Via l'option JVM `-Djava.security.auth.login.config=` dans les plugins Maven (Surefire pour les tests)
+
+#### 5.2 - DbLoginModule
+
+**Fichier** : `api/security/jaas/DbLoginModule.java`
+
+| Phase | Action |
+|-------|--------|
+| `initialize()` | Recoit le Subject et le CallbackHandler |
+| `login()` | Recupere username/password via NameCallback + PasswordCallback, verifie en base via UserRepository + PasswordUtils |
+| `commit()` | Ajoute `UserPrincipal(userId, username)` et `RolePrincipal("ROLE_USER")` au Subject |
+| `abort()` | Nettoyage en cas d'echec |
+| `logout()` | Retire les Principals du Subject |
+
+#### 5.3 - Endpoint /api/auth/login via JAAS
+
+**Fichier** : `api/resource/AuthResource.java`
+
+```java
+LoginContext lc = new LoginContext("MasterAnnonceLogin",
+        new CredentialsCallbackHandler(username, password));
+lc.login();
+Subject subject = lc.getSubject();
+UserPrincipal principal = extractUserPrincipal(subject);
+String token = tokenStore.generateToken(principal.getUserId(), principal.getName());
+```
+
+Le endpoint cree un `LoginContext` avec le domaine `MasterAnnonceLogin`, delegue l'authentification au `DbLoginModule`, puis genere un token a partir du `UserPrincipal` present dans le Subject.
+
+#### 5.4 - TokenLoginModule
+
+**Fichier** : `api/security/jaas/TokenLoginModule.java`
+
+| Phase | Action |
+|-------|--------|
+| `login()` | Recupere le token via NameCallback, valide via `TokenStore.validate()` |
+| `commit()` | Reconstitue l'identite : `UserPrincipal` + `RolePrincipal("ROLE_USER")` dans le Subject |
+
+#### 5.5 - SecurityFilter via JAAS
+
+**Fichier** : `api/security/SecurityFilter.java`
+
+```java
+LoginContext lc = new LoginContext("MasterAnnonceToken", new TokenCallbackHandler(token));
+lc.login();
+Subject subject = lc.getSubject();
+requestContext.setSecurityContext(new UserSecurityContext(subject, isSecure));
+```
+
+Le filtre utilise le domaine `MasterAnnonceToken` pour valider le Bearer token. Le Subject JAAS est injecte dans un `UserSecurityContext` qui supporte desormais `isUserInRole()` via les `RolePrincipal`.
+
+#### 5.6 - Exploitation de l'identite
+
+Le `UserSecurityContext` construit a partir du Subject JAAS expose :
+- `getUserPrincipal()` : retourne le `UserPrincipal` (userId + username)
+- `isUserInRole(role)` : verifie la presence d'un `RolePrincipal` dans le Subject
+- `getSubject()` : acces direct au Subject JAAS si necessaire dans la couche Service
+
+#### Structure des fichiers JAAS
+
+```
+api/security/
+├── jaas/                              # Package JAAS
+│   ├── DbLoginModule.java            #   LoginModule login DB
+│   ├── TokenLoginModule.java         #   LoginModule validation token
+│   ├── RolePrincipal.java            #   Principal pour les roles
+│   ├── CredentialsCallbackHandler.java #  Handler username/password
+│   └── TokenCallbackHandler.java      #  Handler token Bearer
+├── SecurityFilter.java                # Filtre -> LoginContext JAAS
+├── UserPrincipal.java                 # Principal identite (compatible JAAS)
+├── UserSecurityContext.java           # SecurityContext -> Subject JAAS
+├── TokenStore.java                    # Stockage tokens en memoire
+└── TokenInfo.java                     # Record token metadata
+```
+
 ---
 
 ## Partie IV - Tests et qualite
@@ -594,7 +697,13 @@ private void cleanDatabase() {
 
 **Solution** : Regroupement dans `AnnonceSearchParams` (extends `PaginationParams`) avec `@BeanParam`. `PaginationParams` est generique et reutilisable pour tout endpoint pagine.
 
-### 6. Organisation des exceptions par domaine metier
+### 6. Integration JAAS dans une architecture REST stateless
+
+**Probleme** : JAAS est historiquement concu pour des applications avec session (JNDI, EJB). L'integrer dans une API REST stateless sans serveur d'application (Tomcat seul) necessite d'adapter le chargement de la configuration et la propagation du Subject.
+
+**Solution** : Le fichier `jaas.conf` est charge depuis le classpath via `AppContextListener.initJaas()` au demarrage. La propriete systeme est aussi configuree dans Maven Surefire pour les tests. Le `SecurityFilter` cree un `LoginContext` a chaque requete protegee, le Subject resultant est encapsule dans un `UserSecurityContext` JAX-RS standard, compatible avec `@Context SecurityContext`.
+
+### 7. Organisation des exceptions par domaine metier
 
 **Probleme** : Les exceptions etaient nommees par couche technique (`RepositoryException`, `ServiceException`), ce qui ne communique pas l'intention metier et couple les noms d'exceptions a l'architecture interne.
 

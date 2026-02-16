@@ -1,11 +1,20 @@
 package org.example.tpj2eannonces.api.resource;
 
+import java.security.Principal;
+import java.util.Set;
+
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+
 import org.example.tpj2eannonces.api.dto.auth.LoginDTO;
 import org.example.tpj2eannonces.api.dto.auth.LoginResponseDTO;
 import org.example.tpj2eannonces.api.dto.common.ApiErrorDTO;
 import org.example.tpj2eannonces.api.security.TokenStore;
-import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.service.UserService;
+import org.example.tpj2eannonces.api.security.UserPrincipal;
+import org.example.tpj2eannonces.api.security.jaas.CredentialsCallbackHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
@@ -22,22 +31,42 @@ import jakarta.ws.rs.core.Response;
 @PermitAll
 public class AuthResource {
 
-    private final UserService userService = new UserService();
+    private static final Logger logger = LoggerFactory.getLogger(AuthResource.class);
+
     private final TokenStore tokenStore = TokenStore.getInstance();
 
     @POST
     @Path("/login")
     public Response login(@Valid LoginDTO dto) {
-        return userService.authenticate(dto.username(), dto.password())
-                .map(this::buildLoginResponse)
-                .orElseGet(() -> Response.status(Response.Status.UNAUTHORIZED)
-                        .entity(ApiErrorDTO.of("UNAUTHORIZED", "Identifiants invalides"))
-                        .build());
+        try {
+            LoginContext lc = new LoginContext(
+                    "MasterAnnonceLogin",
+                    new CredentialsCallbackHandler(dto.username(), dto.password()));
+            lc.login();
+
+            Subject subject = lc.getSubject();
+            UserPrincipal userPrincipal = extractUserPrincipal(subject);
+
+            String token = tokenStore.generateToken(userPrincipal.getUserId(), userPrincipal.getName());
+            long expiresIn = tokenStore.getTokenTtlSeconds();
+
+            logger.debug("Login JAAS reussi pour: {}", userPrincipal.getName());
+            return Response.ok(new LoginResponseDTO(token, expiresIn)).build();
+
+        } catch (LoginException e) {
+            logger.debug("Echec login JAAS: {}", e.getMessage());
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(ApiErrorDTO.of("UNAUTHORIZED", "Identifiants invalides"))
+                    .build();
+        }
     }
 
-    private Response buildLoginResponse(User user) {
-        String token = tokenStore.generateToken(user.getId(), user.getUsername());
-        long expiresIn = tokenStore.getTokenTtlSeconds();
-        return Response.ok(new LoginResponseDTO(token, expiresIn)).build();
+    private UserPrincipal extractUserPrincipal(Subject subject) {
+        Set<Principal> principals = subject.getPrincipals();
+        return principals.stream()
+                .filter(p -> p instanceof UserPrincipal)
+                .map(p -> (UserPrincipal) p)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("UserPrincipal absent du Subject JAAS"));
     }
 }
