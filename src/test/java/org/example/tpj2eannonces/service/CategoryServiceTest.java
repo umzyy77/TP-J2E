@@ -3,6 +3,8 @@ package org.example.tpj2eannonces.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.example.tpj2eannonces.exception.category.CategoryInUseException;
+import org.example.tpj2eannonces.exception.category.DuplicateCategoryException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
@@ -66,7 +68,7 @@ class CategoryServiceTest {
         Category duplicateCategory = new Category("Immobilier");
 
         assertThatThrownBy(() -> service.create(duplicateCategory))
-                .isInstanceOf(ServiceException.class)
+                .isInstanceOf(DuplicateCategoryException.class)
                 .hasMessageContaining("existe");
     }
 
@@ -88,7 +90,7 @@ class CategoryServiceTest {
         }
 
         assertThatThrownBy(() -> service.delete(categoryId))
-                .isInstanceOf(ServiceException.class)
+                .isInstanceOf(CategoryInUseException.class)
                 .hasMessageContaining("annonce(s)");
     }
 

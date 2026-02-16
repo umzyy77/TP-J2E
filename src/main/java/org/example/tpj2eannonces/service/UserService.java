@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.example.tpj2eannonces.exception.user.DuplicateUserException;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.repository.UserRepository;
 import org.example.tpj2eannonces.utils.JPAUtil;
@@ -24,10 +25,10 @@ public class UserService {
     public User create(User user) {
         return JPAUtil.inTransaction(em -> {
             if (repository.existsByUsername(em, user.getUsername())) {
-                throw new ServiceException("Le nom d'utilisateur existe déjà: " + user.getUsername());
+                throw new DuplicateUserException("Le nom d'utilisateur", user.getUsername());
             }
             if (repository.existsByEmail(em, user.getEmail())) {
-                throw new ServiceException("L'email existe déjà: " + user.getEmail());
+                throw new DuplicateUserException("L'email", user.getEmail());
             }
             user.setPassword(PasswordUtils.hash(user.getPassword()));
             return repository.save(em, user);

@@ -3,6 +3,8 @@ package org.example.tpj2eannonces.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.example.tpj2eannonces.exception.category.CategoryInUseException;
+import org.example.tpj2eannonces.exception.category.DuplicateCategoryException;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.repository.CategoryRepository;
 import org.example.tpj2eannonces.utils.JPAUtil;
@@ -22,7 +24,7 @@ public class CategoryService {
     public Category create(Category category) {
         return JPAUtil.inTransaction(em -> {
             if (repository.existsByLabel(em, category.getLabel())) {
-                throw new ServiceException("La catégorie existe déjà: " + category.getLabel());
+                throw new DuplicateCategoryException(category.getLabel());
             }
             return repository.save(em, category);
         });
@@ -36,7 +38,7 @@ public class CategoryService {
         return JPAUtil.inTransaction(em -> {
             long count = repository.countAnnoncesByCategory(em, categoryId);
             if (count > 0) {
-                throw new ServiceException("Impossible de supprimer: " + count + " annonce(s) liée(s)");
+                throw new CategoryInUseException(count);
             }
             return repository.deleteById(em, categoryId);
         });

@@ -67,6 +67,10 @@ public class Annonce implements Serializable, OwnableByUser {
     @Column(nullable = false, length = 20)
     private AnnonceStatus status = AnnonceStatus.DRAFT;
 
+    @jakarta.persistence.Version
+    @Column(name = "version")
+    private Long version;
+
     @NotNull(message = "L'auteur est obligatoire")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)

@@ -4,8 +4,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.example.tpj2eannonces.exception.ForbiddenException;
+import org.example.tpj2eannonces.exception.NotFoundException;
+import org.example.tpj2eannonces.exception.annonce.AnnonceImmutableException;
+import org.example.tpj2eannonces.exception.annonce.ArchiveRequiredException;
+import org.example.tpj2eannonces.exception.annonce.InvalidTransitionException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
+import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.repository.AnnonceRepository;
 import org.example.tpj2eannonces.utils.JPAUtil;
 
@@ -29,29 +35,77 @@ public class AnnonceService {
         return JPAUtil.inTransaction(em -> repository.update(em, annonce));
     }
 
-    public Annonce changeStatus(Long annonceId, String action) {
+    public Annonce updateFields(Long annonceId, UUID currentUserId, String title, String description,
+                                String adress, String mail, Long categoryId) {
+        return JPAUtil.inTransaction(em -> {
+            Annonce existing = repository.findById(em, annonceId)
+                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+
+            checkOwnership(existing, currentUserId);
+
+            if (existing.getStatus() == AnnonceStatus.PUBLISHED) {
+                throw new AnnonceImmutableException();
+            }
+
+            existing.setTitle(title);
+            existing.setDescription(description);
+            existing.setAdress(adress);
+            existing.setMail(mail);
+
+            if (categoryId != null) {
+                Category category = em.find(Category.class, categoryId);
+                if (category == null) {
+                    throw new NotFoundException("Categorie non trouvee: " + categoryId);
+                }
+                existing.setCategory(category);
+            }
+
+            return existing;
+        });
+    }
+
+    public Annonce changeStatus(Long annonceId, UUID currentUserId, String action) {
         return JPAUtil.inTransaction(em -> {
             Annonce annonce = repository.findById(em, annonceId)
-                    .orElseThrow(() -> new ServiceException("Annonce non trouvee: " + annonceId));
+                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+
+            checkOwnership(annonce, currentUserId);
 
             AnnonceStatus expectedCurrentStatus = AnnonceStatus.fromAction(action)
-                    .orElseThrow(() -> new ServiceException("Action inconnue: " + action));
+                    .orElseThrow(() -> new InvalidTransitionException(action));
 
             if (annonce.getStatus() != expectedCurrentStatus) {
-                throw new ServiceException("Transition invalide depuis " + annonce.getStatus() + " avec action " + action);
+                throw new InvalidTransitionException(annonce.getStatus(), action);
             }
 
             AnnonceStatus targetStatus = expectedCurrentStatus.getNextStatus();
             if (targetStatus == null) {
-                throw new ServiceException("Aucun statut cible pour l'action: " + action);
+                throw new InvalidTransitionException(action);
             }
 
             return repository.updateStatus(em, annonceId, targetStatus);
         });
     }
 
-    public boolean delete(Long annonceId) {
-        return JPAUtil.inTransaction(em -> repository.deleteById(em, annonceId));
+    public boolean delete(Long annonceId, UUID currentUserId) {
+        return JPAUtil.inTransaction(em -> {
+            Annonce existing = repository.findById(em, annonceId)
+                    .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + annonceId));
+
+            checkOwnership(existing, currentUserId);
+
+            if (existing.getStatus() != AnnonceStatus.ARCHIVED) {
+                throw new ArchiveRequiredException();
+            }
+
+            return repository.deleteById(em, annonceId);
+        });
+    }
+
+    private void checkOwnership(Annonce annonce, UUID currentUserId) {
+        if (currentUserId == null || !currentUserId.equals(annonce.getOwnerId())) {
+            throw new ForbiddenException("Vous n'etes pas l'auteur de cette annonce");
+        }
     }
 
     public Optional<Annonce> findById(Long id) {

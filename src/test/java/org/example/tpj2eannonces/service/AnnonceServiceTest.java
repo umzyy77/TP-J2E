@@ -11,7 +11,8 @@ import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.repository.RepositoryException;
+import org.example.tpj2eannonces.exception.NotFoundException;
+import org.example.tpj2eannonces.exception.annonce.InvalidTransitionException;
 import org.example.tpj2eannonces.utils.JPAUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -97,7 +98,7 @@ class AnnonceServiceTest {
         Long categoryId = defaultCategory.getId();
 
         assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, categoryId))
-                .isInstanceOf(RepositoryException.class)
+                .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Auteur non trouve");
     }
 
@@ -106,7 +107,7 @@ class AnnonceServiceTest {
         Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
         assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
 
-        Annonce published = annonceService.changeStatus(annonce.getId(), "publish");
+        Annonce published = annonceService.changeStatus(annonce.getId(), defaultAuthor.getId(), "publish");
 
         assertThat(published.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
     }
@@ -114,9 +115,9 @@ class AnnonceServiceTest {
     @Test
     void archive_shouldChangeStatusToArchived() {
         Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
-        annonceService.changeStatus(annonce.getId(), "publish");
+        annonceService.changeStatus(annonce.getId(), defaultAuthor.getId(), "publish");
 
-        Annonce archived = annonceService.changeStatus(annonce.getId(), "archive");
+        Annonce archived = annonceService.changeStatus(annonce.getId(), defaultAuthor.getId(), "archive");
 
         assertThat(archived.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
     }
@@ -126,8 +127,8 @@ class AnnonceServiceTest {
         Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
         Long annonceId = annonce.getId();
 
-        assertThatThrownBy(() -> annonceService.changeStatus(annonceId, "archive"))
-                .isInstanceOf(ServiceException.class)
+        assertThatThrownBy(() -> annonceService.changeStatus(annonceId, defaultAuthor.getId(), "archive"))
+                .isInstanceOf(InvalidTransitionException.class)
                 .hasMessageContaining("Transition invalide");
     }
 
@@ -135,7 +136,9 @@ class AnnonceServiceTest {
     void delete_shouldRemoveAnnonce() {
         Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
 
-        boolean deleted = annonceService.delete(annonce.getId());
+        annonceService.changeStatus(annonce.getId(), defaultAuthor.getId(), "publish");
+        annonceService.changeStatus(annonce.getId(), defaultAuthor.getId(), "archive");
+        boolean deleted = annonceService.delete(annonce.getId(), defaultAuthor.getId());
 
         assertThat(deleted).isTrue();
         assertThat(annonceService.findById(annonce.getId())).isEmpty();
@@ -145,7 +148,7 @@ class AnnonceServiceTest {
     void findAllPublished_shouldReturnOnlyPublished() {
         createAnnonce("Draft", "Desc", "Addr", "mail@test.com");
         Annonce published = createAnnonce("Published", "Desc", "Addr", "mail2@test.com");
-        annonceService.changeStatus(published.getId(), "publish");
+        annonceService.changeStatus(published.getId(), defaultAuthor.getId(), "publish");
 
         List<Annonce> result = annonceService.findAllPublished(0, 10);
 
