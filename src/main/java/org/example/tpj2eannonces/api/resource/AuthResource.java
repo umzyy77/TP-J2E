@@ -22,19 +22,22 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-@Path("/auth")
+@Path("")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @PermitAll
 public class AuthResource {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthResource.class);
-
-    private final TokenStore tokenStore = TokenStore.getInstance();
+    private static final TokenStore TOKEN_STORE = new TokenStore();
 
     @POST
-    @Path("/login")
+    @Path("login")
     public Response login(@Valid LoginDTO dto) {
+        return doLogin(dto);
+    }
+
+    private Response doLogin(LoginDTO dto) {
         try {
             LoginContext lc = new LoginContext(
                     "MasterAnnonceLogin",
@@ -44,8 +47,8 @@ public class AuthResource {
             Subject subject = lc.getSubject();
             UserPrincipal userPrincipal = extractUserPrincipal(subject);
 
-            String token = tokenStore.generateToken(userPrincipal.getUserId(), userPrincipal.getName());
-            long expiresIn = tokenStore.getTokenTtlSeconds();
+            String token = TOKEN_STORE.generateToken(userPrincipal.getUserId(), userPrincipal.getName());
+            long expiresIn = TOKEN_STORE.getTokenTtlSeconds();
 
             logger.debug("Login JAAS reussi pour: {}", userPrincipal.getName());
             return Response.ok(new LoginResponseDTO(token, expiresIn)).build();

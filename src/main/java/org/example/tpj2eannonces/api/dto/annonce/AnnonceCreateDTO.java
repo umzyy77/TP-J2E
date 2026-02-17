@@ -1,16 +1,11 @@
 package org.example.tpj2eannonces.api.dto.annonce;
 
-import java.util.UUID;
-
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record AnnonceCreateDTO(
-        @NotNull(message = "L'auteur est obligatoire")
-        UUID authorId,
-
         @NotBlank(message = "Le titre est obligatoire")
         @Size(max = 64, message = "Le titre ne doit pas depasser 64 caracteres")
         String title,

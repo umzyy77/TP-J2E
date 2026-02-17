@@ -15,6 +15,9 @@ import com.fasterxml.jackson.core.JsonParseException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.core.Response;
 
 class ExceptionMappersTest {
@@ -97,6 +100,31 @@ class ExceptionMappersTest {
             assertThat(response.getStatus()).isEqualTo(400);
             ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
             assertThat(error.error()).isEqualTo("VALIDATION_ERROR");
+        }
+    }
+
+    @Test
+    void validationExceptionMapper_shouldReturnViolationMessages() {
+        ValidationExceptionMapper mapper = new ValidationExceptionMapper();
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        ValidatedPayload payload = new ValidatedPayload("");
+        Set<ConstraintViolation<ValidatedPayload>> violations = validator.validate(payload);
+        ConstraintViolationException ex = new ConstraintViolationException("Validation failed", Set.copyOf(violations));
+
+        try (Response response = mapper.toResponse(ex)) {
+            assertThat(response.getStatus()).isEqualTo(400);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("VALIDATION_ERROR");
+            assertThat(error.messages()).contains("name: name required");
+        }
+    }
+
+    private static class ValidatedPayload {
+        @NotBlank(message = "name required")
+        private final String name;
+
+        private ValidatedPayload(String name) {
+            this.name = name;
         }
     }
 }

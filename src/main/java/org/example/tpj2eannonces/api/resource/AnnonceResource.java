@@ -12,6 +12,7 @@ import org.example.tpj2eannonces.api.dto.annonce.AnnonceUpdateDTO;
 import org.example.tpj2eannonces.api.dto.common.PaginatedResponseDTO;
 import org.example.tpj2eannonces.api.mapper.AnnonceMapper;
 import org.example.tpj2eannonces.api.security.UserPrincipal;
+import org.example.tpj2eannonces.exception.NotFoundException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.service.AnnonceService;
 
@@ -53,7 +54,7 @@ public class AnnonceResource {
 
     @GET
     @PermitAll
-    public Response list(@BeanParam AnnonceSearchParams params) {
+    public Response list(@Valid @BeanParam AnnonceSearchParams params) {
         List<Annonce> annonces;
         long totalCount;
 
@@ -76,16 +77,16 @@ public class AnnonceResource {
     @Path("/{id}")
     @PermitAll
     public Response getById(@PathParam("id") Long id) {
-        return annonceService.findByIdWithRelations(id)
-                .map(AnnonceMapper::toResponseDTO)
-                .map(dto -> Response.ok(dto).build())
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+        Annonce annonce = annonceService.findByIdWithRelations(id)
+                .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
+        return Response.ok(AnnonceMapper.toResponseDTO(annonce)).build();
     }
 
     @POST
     public Response create(@Valid AnnonceCreateDTO dto, @Context UriInfo uriInfo) {
+        UUID currentUserId = getCurrentUserId();
         Annonce annonce = AnnonceMapper.toEntity(dto);
-        Annonce created = annonceService.create(annonce, dto.authorId(), dto.categoryId());
+        Annonce created = annonceService.create(annonce, currentUserId, dto.categoryId());
 
         AnnonceResponseDTO responseDTO = annonceService.findByIdWithRelations(created.getId())
                 .map(AnnonceMapper::toResponseDTO)
@@ -103,10 +104,6 @@ public class AnnonceResource {
     public Response update(@PathParam("id") Long id, @Valid AnnonceUpdateDTO dto) {
         UUID currentUserId = getCurrentUserId();
 
-        if (annonceService.findById(id).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-
         Annonce updated = annonceService.updateFields(
                 id, currentUserId, dto.title(), dto.description(), dto.adress(), dto.mail(), dto.categoryId());
 
@@ -122,10 +119,6 @@ public class AnnonceResource {
     public Response delete(@PathParam("id") Long id) {
         UUID currentUserId = getCurrentUserId();
 
-        if (annonceService.findById(id).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-
         annonceService.delete(id, currentUserId);
         return Response.noContent().build();
     }
@@ -134,10 +127,6 @@ public class AnnonceResource {
     @Path("/{id}")
     public Response changeStatus(@PathParam("id") Long id, @Valid AnnonceStatusDTO dto) {
         UUID currentUserId = getCurrentUserId();
-
-        if (annonceService.findById(id).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
 
         Annonce updated = annonceService.changeStatus(id, currentUserId, dto.action());
 

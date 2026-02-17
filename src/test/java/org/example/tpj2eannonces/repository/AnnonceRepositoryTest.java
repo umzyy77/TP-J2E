@@ -142,6 +142,16 @@ class AnnonceRepositoryTest {
     }
 
     @Test
+    void deleteById_shouldReturnFalseForNonexistent() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            em.getTransaction().begin();
+            boolean deleted = repository.deleteById(em, -1L);
+            em.getTransaction().commit();
+            assertThat(deleted).isFalse();
+        }
+    }
+
+    @Test
     void findAll_shouldReturnAllAnnonces() {
         saveAnnonce("Titre 1", "Desc 1", "Addr 1", "mail1@test.com");
         saveAnnonce("Titre 2", "Desc 2", "Addr 2", "mail2@test.com");

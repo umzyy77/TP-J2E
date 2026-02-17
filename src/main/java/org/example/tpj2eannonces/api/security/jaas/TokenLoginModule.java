@@ -17,8 +17,7 @@ import org.slf4j.LoggerFactory;
 public class TokenLoginModule extends AbstractLoginModule {
 
     private static final Logger logger = LoggerFactory.getLogger(TokenLoginModule.class);
-
-    private final TokenStore tokenStore = TokenStore.getInstance();
+    private static final TokenStore TOKEN_STORE = new TokenStore();
 
     @Override
     protected LoginResult authenticate() throws LoginException {
@@ -35,7 +34,7 @@ public class TokenLoginModule extends AbstractLoginModule {
             throw new LoginException("Token requis");
         }
 
-        Optional<TokenInfo> tokenInfoOpt = tokenStore.validate(token);
+        Optional<TokenInfo> tokenInfoOpt = TOKEN_STORE.validate(token);
         if (tokenInfoOpt.isEmpty()) {
             logger.debug("Token JAAS invalide ou expire");
             throw new LoginException("Token invalide ou expire");

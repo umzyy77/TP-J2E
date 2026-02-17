@@ -88,7 +88,7 @@ class AuthResourceIT extends JerseyTest {
     void login_shouldReturn200WithToken() {
         LoginDTO loginDTO = new LoginDTO("admin", "password123");
 
-        Response response = target("/auth/login")
+        Response response = target("/login")
                 .request(MediaType.APPLICATION_JSON)
                 .post(Entity.json(loginDTO));
 
@@ -103,7 +103,7 @@ class AuthResourceIT extends JerseyTest {
     void login_shouldReturn401ForInvalidCredentials() {
         LoginDTO loginDTO = new LoginDTO("admin", "wrongpassword");
 
-        Response response = target("/auth/login")
+        Response response = target("/login")
                 .request(MediaType.APPLICATION_JSON)
                 .post(Entity.json(loginDTO));
 
@@ -117,11 +117,12 @@ class AuthResourceIT extends JerseyTest {
     void login_shouldReturn401ForNonexistentUser() {
         LoginDTO loginDTO = new LoginDTO("nobody", "password");
 
-        Response response = target("/auth/login")
+        Response response = target("/login")
                 .request(MediaType.APPLICATION_JSON)
                 .post(Entity.json(loginDTO));
 
         assertThat(response.getStatus()).isEqualTo(401);
         response.close();
     }
+
 }

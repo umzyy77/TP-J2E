@@ -153,4 +153,18 @@ class UserServiceTest {
         assertThat(deleted).isTrue();
         assertThat(userService.findById(user.getId())).isEmpty();
     }
+
+    @Test
+    void update_shouldMergeUser() {
+        User user = userService.create(new User("john", "john@test.com", "password123"));
+        user.setUsername("john-updated");
+        user.setEmail("john-updated@test.com");
+
+        User updated = userService.update(user);
+
+        assertThat(updated.getUsername()).isEqualTo("john-updated");
+        assertThat(updated.getEmail()).isEqualTo("john-updated@test.com");
+        assertThat(userService.findById(updated.getId())).isPresent();
+        assertThat(userService.findById(updated.getId()).orElseThrow().getUsername()).isEqualTo("john-updated");
+    }
 }

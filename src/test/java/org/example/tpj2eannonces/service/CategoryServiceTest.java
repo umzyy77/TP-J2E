@@ -140,4 +140,16 @@ class CategoryServiceTest {
         assertThat(deleted).isTrue();
         assertThat(service.findById(created.getId())).isEmpty();
     }
+
+    @Test
+    void update_shouldMergeCategory() {
+        Category created = service.create(new Category("Initial"));
+        created.setLabel("Updated");
+
+        Category updated = service.update(created);
+
+        assertThat(updated.getLabel()).isEqualTo("Updated");
+        assertThat(service.findById(updated.getId())).isPresent();
+        assertThat(service.findById(updated.getId()).orElseThrow().getLabel()).isEqualTo("Updated");
+    }
 }

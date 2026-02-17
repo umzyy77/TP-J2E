@@ -2,8 +2,11 @@ package org.example.tpj2eannonces.api.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +17,8 @@ class TokenStoreTest {
 
     @BeforeEach
     void setUp() {
-        tokenStore = TokenStore.getInstance();
+        tokenStore = new TokenStore();
+        tokenStore.clear();
     }
 
     @Test
@@ -61,10 +65,27 @@ class TokenStoreTest {
     }
 
     @Test
-    void getInstance_shouldReturnSameInstance() {
-        TokenStore instance1 = TokenStore.getInstance();
-        TokenStore instance2 = TokenStore.getInstance();
+    void instances_shouldShareBackingStorage() {
+        TokenStore store1 = new TokenStore();
+        TokenStore store2 = new TokenStore();
+        String token = store1.generateToken(UUID.randomUUID(), "testuser");
 
-        assertThat(instance1).isSameAs(instance2);
+        assertThat(store2.validate(token)).isPresent();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void validate_shouldRejectExpiredToken() throws Exception {
+        String token = "expired-token";
+
+        Field tokensField = TokenStore.class.getDeclaredField("TOKENS");
+        tokensField.setAccessible(true);
+        ConcurrentHashMap<String, TokenInfo> internalMap =
+                (ConcurrentHashMap<String, TokenInfo>) tokensField.get(null);
+
+        internalMap.put(token, new TokenInfo(UUID.randomUUID(), "expired-user", Instant.now().minusSeconds(10)));
+
+        assertThat(tokenStore.validate(token)).isEmpty();
+        assertThat(internalMap).doesNotContainKey(token);
     }
 }

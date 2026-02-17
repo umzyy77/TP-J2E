@@ -44,7 +44,7 @@ Point d'entree : `@ApplicationPath("/api")` dans `RestApplication.java`.
 | PUT | `/api/annonces/{id}` | Oui | 200 | 403/404/409 |
 | PATCH | `/api/annonces/{id}` | Oui | 200 | 403/404/409 |
 | DELETE | `/api/annonces/{id}` | Oui | 204 | 403/404/409 |
-| POST | `/api/auth/login` | Non | 200 | 401 |
+| POST | `/api/login` | Non | 200 | 401 |
 
 **Recherche** : `GET /api/annonces?q=voiture&category=1&status=PUBLISHED&page=0&size=5`
 
@@ -85,7 +85,7 @@ Hierarchie : `ConflictException` est parente de toutes les exceptions de conflit
 
 ### Exo 5 - Authentification stateless + JAAS
 
-**TokenStore** (Singleton) : genere des UUID tokens, stockes dans une `ConcurrentHashMap` avec expiration 1h.
+**TokenStore** (enum singleton) : genere des UUID tokens, stockes dans une `ConcurrentHashMap` avec expiration 1h.
 
 **JAAS** : deux `LoginModule` configurés dans `jaas.conf` :
 
@@ -138,7 +138,7 @@ Base H2 in-memory (`MasterAnnonceTestPU`, `create-drop`). Chaque test nettoie la
 | `CategoryServiceTest` | 8 | CRUD, doublons, integrite referentielle |
 | `DbLoginModuleTest` | 7 | Login/commit, credentials invalides, abort, logout |
 | `TokenLoginModuleTest` | 7 | Token valide/invalide/blank, commit, abort, logout |
-| `TokenStoreTest` | 6 | Generation, validation, revocation, TTL, singleton |
+| `TokenStoreTest` | 6 | Generation, validation, revocation, TTL, enum singleton |
 | `UserSecurityContextTest` | 6 | Principal, roles, isSecure, scheme, subject |
 | `PasswordUtilsTest` | 7 | Hash BCrypt, verify, fallback plaintext, null |
 | `AnnonceMapperTest` | 6 | toEntity, updateEntity, toResponseDTO, toList |
@@ -153,10 +153,10 @@ Base H2 in-memory (`MasterAnnonceTestPU`, `create-drop`). Chaque test nettoie la
 
 | Classe | Tests | Couverture |
 |--------|-------|------------|
-| `AuthResourceIT` | 3 | Login 200 + token, 401 credentials invalides, 401 user inexistant |
-| `AnnonceResourceIT` | 16 | GET list/detail, POST 201/401, PUT 200/404/409, PATCH publish/archive/409, DELETE 204/409/404/401 |
+| `AuthResourceIT` | 3 | Login 200 + token (`/login`), 401 invalides |
+| `AnnonceResourceIT` | 17 | GET list/detail + validation pagination, POST 201/401, PUT 200/404/409, PATCH publish/archive/409, DELETE 204/409/404/401 |
 
-**Total : 147 tests, 0 failures**
+**Total : 148 tests, 0 failures**
 
 #### SonarQube
 
@@ -166,7 +166,17 @@ Base H2 in-memory (`MasterAnnonceTestPU`, `create-drop`). Chaque test nettoie la
 | Vulnerabilities | 0 |
 | Code Smells | 0 open |
 | Duplication | 0.0% |
-| Coverage | 80.2% |
+| Coverage | 81.9% |
+
+### Exo 10 - Industrialisation
+
+1. **Separation unitaires / integration** :
+   - Unitaires: `mvn test`
+   - Integration: `mvn verify -DskipUnitTests=true`
+   - Tous les tests: `mvn verify`
+2. **Logging structure** : Logback + sortie JSON (`src/main/resources/logback.xml`).
+3. **Tests de charge simples** : script K6 fourni (`docs/load-test-k6.js`).
+4. **Documentation API** : specification OpenAPI YAML (`src/main/resources/openapi.yaml`) exposee via `GET /api/openapi`.
 
 ---
 

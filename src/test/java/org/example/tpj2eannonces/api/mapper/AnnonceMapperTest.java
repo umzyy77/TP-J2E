@@ -3,7 +3,6 @@ package org.example.tpj2eannonces.api.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.example.tpj2eannonces.api.dto.annonce.AnnonceCreateDTO;
 import org.example.tpj2eannonces.api.dto.annonce.AnnonceResponseDTO;
@@ -19,7 +18,7 @@ class AnnonceMapperTest {
     @Test
     void toEntity_shouldMapDtoToAnnonce() {
         AnnonceCreateDTO dto = new AnnonceCreateDTO(
-                UUID.randomUUID(), "Titre", "Description", "Adresse", "mail@test.com", 1L);
+                "Titre", "Description", "Adresse", "mail@test.com", 1L);
 
         Annonce annonce = AnnonceMapper.toEntity(dto);
 

@@ -379,4 +379,47 @@ class AnnonceServiceTest {
 
         assertThat(updated.getTitle()).isEqualTo("New");
     }
+
+    @Test
+    void changeStatus_shouldRejectUnknownAction() {
+        Annonce annonce = createAnnonce("Titre", "Desc", "Addr", "mail@test.com");
+        Long annonceId = annonce.getId();
+        UUID ownerId = defaultAuthor.getId();
+
+        assertThatThrownBy(() -> annonceService.changeStatus(annonceId, ownerId, "foobar"))
+                .isInstanceOf(InvalidTransitionException.class)
+                .hasMessageContaining("Action inconnue");
+    }
+
+    @Test
+    void updateFields_shouldRejectInvalidCategoryId() {
+        Annonce annonce = createAnnonce("Titre", "Desc", "Addr", "mail@test.com");
+        Long annonceId = annonce.getId();
+        UUID ownerId = defaultAuthor.getId();
+
+        assertThatThrownBy(() -> annonceService.updateFields(
+                annonceId, ownerId, "New", "Desc", "Addr", "mail@test.com", 99999L))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Categorie non trouvee");
+    }
+
+    @Test
+    void delete_shouldRejectNonexistentAnnonce() {
+        UUID ownerId = defaultAuthor.getId();
+
+        assertThatThrownBy(() -> annonceService.delete(99999L, ownerId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Annonce non trouvee");
+    }
+
+    @Test
+    void updateFields_shouldRejectNonexistentAnnonce() {
+        UUID ownerId = defaultAuthor.getId();
+        Long categoryId = defaultCategory.getId();
+
+        assertThatThrownBy(() -> annonceService.updateFields(
+                99999L, ownerId, "New", "Desc", "Addr", "mail@test.com", categoryId))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Annonce non trouvee");
+    }
 }

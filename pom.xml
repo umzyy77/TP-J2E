@@ -15,6 +15,10 @@
         <maven.compiler.release>25</maven.compiler.release>
         <slf4j.version>2.0.16</slf4j.version>
         <jersey.version>3.1.6</jersey.version>
+        <logback.version>1.5.18</logback.version>
+        <logstash.encoder.version>7.4</logstash.encoder.version>
+        <skipUnitTests>false</skipUnitTests>
+        <skipITs>false</skipITs>
     </properties>
 
     <dependencies>
@@ -23,16 +27,6 @@
             <artifactId>jakarta.servlet-api</artifactId>
             <version>6.0.0</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.servlet.jsp.jstl</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.web</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl</artifactId>
-            <version>3.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -51,9 +45,14 @@
             <version>${slf4j.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>${slf4j.version}</version>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash.encoder.version}</version>
         </dependency>
         <!-- JPA / Hibernate -->
         <dependency>
@@ -204,6 +203,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
                 <configuration>
+                    <skipTests>${skipUnitTests}</skipTests>
                     <systemPropertyVariables>
                         <tpj2e.persistence.unit>MasterAnnonceTestPU</tpj2e.persistence.unit>
                         <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
@@ -212,14 +212,47 @@
                     <argLine>@{argLine} --add-opens java.base/java.net=ALL-UNNAMED</argLine>
                     <includes>
                         <include>**/*Test.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <skipITs>${skipITs}</skipITs>
+                    <systemPropertyVariables>
+                        <tpj2e.persistence.unit>MasterAnnonceTestPU</tpj2e.persistence.unit>
+                        <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+                        <java.security.auth.login.config>${project.basedir}/src/main/resources/jaas.conf</java.security.auth.login.config>
+                    </systemPropertyVariables>
+                    <argLine>@{argLine} --add-opens java.base/java.net=ALL-UNNAMED</argLine>
+                    <includes>
                         <include>**/*IT.java</include>
                     </includes>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.14</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/AppContextListener.class</exclude>
+                        <exclude>**/RestApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -229,7 +262,7 @@
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>

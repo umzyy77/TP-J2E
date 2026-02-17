@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginException;
@@ -12,13 +13,16 @@ import javax.security.auth.login.LoginException;
 import org.example.tpj2eannonces.api.security.TokenStore;
 import org.example.tpj2eannonces.api.security.UserPrincipal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class TokenLoginModuleTest {
 
     @Test
     void loginAndCommit_shouldPopulateSubjectWithValidToken() throws LoginException {
         UUID userId = UUID.randomUUID();
-        String token = TokenStore.getInstance().generateToken(userId, "testuser");
+        String token = new TokenStore().generateToken(userId, "testuser");
 
         Subject subject = new Subject();
         TokenLoginModule module = new TokenLoginModule();
@@ -35,26 +39,16 @@ class TokenLoginModuleTest {
         assertThat(principal.getName()).isEqualTo("testuser");
     }
 
-    @Test
-    void login_shouldFailForInvalidToken() {
+    @ParameterizedTest
+    @MethodSource("invalidTokenCases")
+    void login_shouldFailForInvalidOrMissingToken(String token, String expectedMessage) {
         Subject subject = new Subject();
         TokenLoginModule module = new TokenLoginModule();
-        module.initialize(subject, new TokenCallbackHandler("invalid-token"), new HashMap<>(), new HashMap<>());
+        module.initialize(subject, new TokenCallbackHandler(token), new HashMap<>(), new HashMap<>());
 
         assertThatThrownBy(module::login)
                 .isInstanceOf(LoginException.class)
-                .hasMessageContaining("Token invalide");
-    }
-
-    @Test
-    void login_shouldFailForBlankToken() {
-        Subject subject = new Subject();
-        TokenLoginModule module = new TokenLoginModule();
-        module.initialize(subject, new TokenCallbackHandler(""), new HashMap<>(), new HashMap<>());
-
-        assertThatThrownBy(module::login)
-                .isInstanceOf(LoginException.class)
-                .hasMessageContaining("Token requis");
+                .hasMessageContaining(expectedMessage);
     }
 
     @Test
@@ -69,7 +63,7 @@ class TokenLoginModuleTest {
     @Test
     void logout_shouldRemovePrincipals() throws LoginException {
         UUID userId = UUID.randomUUID();
-        String token = TokenStore.getInstance().generateToken(userId, "testuser");
+        String token = new TokenStore().generateToken(userId, "testuser");
 
         Subject subject = new Subject();
         TokenLoginModule module = new TokenLoginModule();
@@ -95,7 +89,7 @@ class TokenLoginModuleTest {
     @Test
     void abort_shouldCleanupAfterLogin() throws LoginException {
         UUID userId = UUID.randomUUID();
-        String token = TokenStore.getInstance().generateToken(userId, "testuser");
+        String token = new TokenStore().generateToken(userId, "testuser");
 
         Subject subject = new Subject();
         TokenLoginModule module = new TokenLoginModule();
@@ -103,5 +97,29 @@ class TokenLoginModuleTest {
 
         module.login();
         assertThat(module.abort()).isTrue();
+    }
+
+    @Test
+    void abort_shouldCallLogoutWhenCommitSucceeded() throws LoginException {
+        UUID userId = UUID.randomUUID();
+        String token = new TokenStore().generateToken(userId, "testuser");
+
+        Subject subject = new Subject();
+        TokenLoginModule module = new TokenLoginModule();
+        module.initialize(subject, new TokenCallbackHandler(token), new HashMap<>(), new HashMap<>());
+
+        module.login();
+        module.commit();
+
+        assertThat(module.abort()).isTrue();
+        assertThat(subject.getPrincipals(UserPrincipal.class)).isEmpty();
+        assertThat(subject.getPrincipals(RolePrincipal.class)).isEmpty();
+    }
+
+    private static Stream<Arguments> invalidTokenCases() {
+        return Stream.of(
+                Arguments.of("invalid-token", "Token invalide"),
+                Arguments.of("", "Token requis"),
+                Arguments.of(null, "Token requis"));
     }
 }

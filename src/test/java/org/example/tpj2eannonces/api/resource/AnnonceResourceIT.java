@@ -10,6 +10,7 @@ import org.example.tpj2eannonces.api.dto.annonce.AnnonceStatusDTO;
 import org.example.tpj2eannonces.api.dto.annonce.AnnonceUpdateDTO;
 import org.example.tpj2eannonces.api.dto.auth.LoginDTO;
 import org.example.tpj2eannonces.api.dto.auth.LoginResponseDTO;
+import org.example.tpj2eannonces.api.dto.common.ApiErrorDTO;
 import org.example.tpj2eannonces.api.config.ObjectMapperProvider;
 import org.example.tpj2eannonces.api.exception.ConflictExceptionMapper;
 import org.example.tpj2eannonces.api.exception.ForbiddenExceptionMapper;
@@ -19,6 +20,7 @@ import org.example.tpj2eannonces.api.exception.NotFoundExceptionMapper;
 import org.example.tpj2eannonces.api.exception.ValidationExceptionMapper;
 import org.example.tpj2eannonces.api.security.SecurityFilter;
 import org.example.tpj2eannonces.model.Category;
+import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.User;
 import org.example.tpj2eannonces.service.CategoryService;
 import org.example.tpj2eannonces.service.UserService;
@@ -107,7 +109,7 @@ class AnnonceResourceIT extends JerseyTest {
     }
 
     private String login() {
-        Response response = target("/auth/login")
+        Response response = target("/login")
                 .request(MediaType.APPLICATION_JSON)
                 .post(Entity.json(new LoginDTO("testuser", "password123")));
         LoginResponseDTO body = response.readEntity(LoginResponseDTO.class);
@@ -117,7 +119,7 @@ class AnnonceResourceIT extends JerseyTest {
 
     private Long createAnnonceViaApi(String title) {
         AnnonceCreateDTO dto = new AnnonceCreateDTO(
-                testUser.getId(), title, "Description", "Adresse", "mail@test.com", testCategory.getId());
+                title, "Description", "Adresse", "mail@test.com", testCategory.getId());
         Response response = target("/annonces")
                 .request(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + authToken)
@@ -162,6 +164,59 @@ class AnnonceResourceIT extends JerseyTest {
         response.close();
     }
 
+    @Test
+    void getList_shouldSupportKeywordSearch() {
+        createAnnonceViaApi("Voiture rouge");
+        createAnnonceViaApi("Appartement centre");
+
+        Response response = target("/annonces")
+                .queryParam("q", "voiture")
+                .request(MediaType.APPLICATION_JSON)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = response.readEntity(Map.class);
+        assertThat(body).containsKey("data");
+        response.close();
+    }
+
+    @Test
+    void getList_shouldSupportFilters() {
+        createAnnonceViaApi("Draft annonce");
+        Long idPublished = createAnnonceViaApi("Published annonce");
+        target("/annonces/" + idPublished)
+                .request(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + authToken)
+                .method("PATCH", Entity.json(new AnnonceStatusDTO("publish")));
+
+        Response response = target("/annonces")
+                .queryParam("category", testCategory.getId())
+                .queryParam("status", AnnonceStatus.DRAFT.name())
+                .request(MediaType.APPLICATION_JSON)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = response.readEntity(Map.class);
+        assertThat(body).containsKey("data");
+        response.close();
+    }
+
+    @Test
+    void getList_shouldReturn400ForInvalidPaginationParams() {
+        Response response = target("/annonces")
+                .queryParam("page", -1)
+                .queryParam("size", 0)
+                .request(MediaType.APPLICATION_JSON)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("VALIDATION_ERROR");
+        response.close();
+    }
+
     // --- GET /annonces/{id} ---
 
     @Test
@@ -186,6 +241,8 @@ class AnnonceResourceIT extends JerseyTest {
                 .get();
 
         assertThat(response.getStatus()).isEqualTo(404);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("NOT_FOUND");
         response.close();
     }
 
@@ -194,7 +251,7 @@ class AnnonceResourceIT extends JerseyTest {
     @Test
     void create_shouldReturn201WithLocationHeader() {
         AnnonceCreateDTO dto = new AnnonceCreateDTO(
-                testUser.getId(), "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
+                "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
 
         Response response = target("/annonces")
                 .request(MediaType.APPLICATION_JSON)
@@ -206,19 +263,37 @@ class AnnonceResourceIT extends JerseyTest {
         AnnonceResponseDTO body = response.readEntity(AnnonceResponseDTO.class);
         assertThat(body.title()).isEqualTo("Titre");
         assertThat(body.status()).isEqualTo("DRAFT");
+        assertThat(body.author()).isNotNull();
+        assertThat(body.author().id()).isEqualTo(testUser.getId());
         response.close();
     }
 
     @Test
     void create_shouldReturn401WithoutToken() {
         AnnonceCreateDTO dto = new AnnonceCreateDTO(
-                testUser.getId(), "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
+                "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
 
         Response response = target("/annonces")
                 .request(MediaType.APPLICATION_JSON)
                 .post(Entity.json(dto));
 
         assertThat(response.getStatus()).isEqualTo(401);
+        response.close();
+    }
+
+    @Test
+    void create_shouldReturn401ForInvalidBearerFormat() {
+        AnnonceCreateDTO dto = new AnnonceCreateDTO(
+                "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
+
+        Response response = target("/annonces")
+                .request(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Basic xyz")
+                .post(Entity.json(dto));
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("UNAUTHORIZED");
         response.close();
     }
 
@@ -250,6 +325,8 @@ class AnnonceResourceIT extends JerseyTest {
                 .put(Entity.json(dto));
 
         assertThat(response.getStatus()).isEqualTo(404);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("NOT_FOUND");
         response.close();
     }
 
@@ -323,6 +400,19 @@ class AnnonceResourceIT extends JerseyTest {
         response.close();
     }
 
+    @Test
+    void changeStatus_shouldReturn404ForNonexistent() {
+        Response response = target("/annonces/99999")
+                .request(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + authToken)
+                .method("PATCH", Entity.json(new AnnonceStatusDTO("publish")));
+
+        assertThat(response.getStatus()).isEqualTo(404);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("NOT_FOUND");
+        response.close();
+    }
+
     // --- DELETE /annonces/{id} ---
 
     @Test
@@ -368,6 +458,8 @@ class AnnonceResourceIT extends JerseyTest {
                 .delete();
 
         assertThat(response.getStatus()).isEqualTo(404);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("NOT_FOUND");
         response.close();
     }
 

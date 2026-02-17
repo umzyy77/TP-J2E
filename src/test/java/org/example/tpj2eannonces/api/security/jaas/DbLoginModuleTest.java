@@ -3,9 +3,14 @@ package org.example.tpj2eannonces.api.security.jaas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.login.LoginException;
 
 import org.example.tpj2eannonces.api.security.UserPrincipal;
@@ -135,5 +140,43 @@ class DbLoginModuleTest {
         module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
 
         assertThat(module.abort()).isFalse();
+    }
+
+    @Test
+    void login_shouldFailForNullCredentials() {
+        Subject subject = new Subject();
+        DbLoginModule module = new DbLoginModule();
+
+        CallbackHandler nullCredentialsHandler = callbacks -> {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback nameCallback) {
+                    nameCallback.setName(null);
+                } else if (callback instanceof PasswordCallback passwordCallback) {
+                    passwordCallback.setPassword(null);
+                }
+            }
+        };
+
+        module.initialize(subject, nullCredentialsHandler, new HashMap<>(), new HashMap<>());
+
+        assertThatThrownBy(module::login)
+                .isInstanceOf(LoginException.class)
+                .hasMessageContaining("Username et password requis");
+    }
+
+    @Test
+    void authenticate_shouldFailForCallbackError() {
+        Subject subject = new Subject();
+        DbLoginModule module = new DbLoginModule();
+
+        CallbackHandler brokenHandler = _ -> {
+            throw new IOException("boom");
+        };
+
+        module.initialize(subject, brokenHandler, new HashMap<>(), new HashMap<>());
+
+        assertThatThrownBy(module::login)
+                .isInstanceOf(LoginException.class)
+                .hasMessageContaining("Erreur lors de la recuperation des credentials");
     }
 }
