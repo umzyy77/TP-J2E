@@ -11,6 +11,27 @@ import org.junit.jupiter.api.Test;
 class AnnonceModelTest {
 
     @Test
+    void onCreate_shouldSetDateWhenNull() {
+        Annonce annonce = new Annonce("Titre", "Desc", "Addr", "mail@test.com");
+        assertThat(annonce.getDate()).isNull();
+
+        annonce.onCreate();
+
+        assertThat(annonce.getDate()).isNotNull();
+    }
+
+    @Test
+    void onCreate_shouldKeepExistingDate() {
+        Annonce annonce = new Annonce("Titre", "Desc", "Addr", "mail@test.com");
+        LocalDateTime existingDate = LocalDateTime.of(2026, 1, 1, 10, 30);
+        annonce.setDate(existingDate);
+
+        annonce.onCreate();
+
+        assertThat(annonce.getDate()).isEqualTo(existingDate);
+    }
+
+    @Test
     void getOwnerId_shouldReturnNullWhenAuthorIsNull() {
         Annonce annonce = new Annonce("Titre", "Desc", "Addr", "mail@test.com");
         assertThat(annonce.getOwnerId()).isNull();

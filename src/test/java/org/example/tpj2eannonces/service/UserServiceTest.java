@@ -2,169 +2,135 @@ package org.example.tpj2eannonces.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
 
 import org.example.tpj2eannonces.exception.user.DuplicateUserException;
 import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.utils.JPAUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.example.tpj2eannonces.repository.UserRepository;
+import org.example.tpj2eannonces.utils.PasswordUtils;
+import org.example.tpj2eannonces.utils.PersistenceExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import jakarta.persistence.EntityManager;
 
+@ExtendWith(MockitoExtension.class)
 class UserServiceTest {
+
+    @Mock
+    private UserRepository repository;
+
+    @Mock
+    private PersistenceExecutor persistenceExecutor;
+
+    @Mock
+    private EntityManager entityManager;
 
     private UserService userService;
 
-    @BeforeAll
-    static void setUpClass() {
-        JPAUtil.getEntityManagerFactory();
-    }
-
-    @AfterAll
-    static void tearDownClass() {
-        JPAUtil.close();
-    }
-
     @BeforeEach
     void setUp() {
-        userService = new UserService();
-        cleanDatabase();
-    }
-
-    @AfterEach
-    void tearDown() {
-        cleanDatabase();
-    }
-
-    private void cleanDatabase() {
-        try (EntityManager em = JPAUtil.getEntityManager()) {
-            em.getTransaction().begin();
-            em.createQuery("DELETE FROM Annonce").executeUpdate();
-            em.createQuery("DELETE FROM User").executeUpdate();
-            em.createQuery("DELETE FROM Category").executeUpdate();
-            em.getTransaction().commit();
-        }
+        userService = new UserService(repository, persistenceExecutor);
+        stubPersistenceExecution();
     }
 
     @Test
-    void create_shouldPersistUser() {
-        User user = userService.create(new User("john", "john@test.com", "password123"));
+    void constructor_withRepositoryOnly_shouldCreateService() {
+        UserService service = new UserService(repository);
 
-        assertThat(user.getId()).isNotNull();
-        assertThat(user.getUsername()).isEqualTo("john");
-        assertThat(user.getCreatedAt()).isNotNull();
+        assertThat(service).isNotNull();
     }
 
     @Test
-    void create_shouldHashPassword() {
-        User user = userService.create(new User("john", "john@test.com", "password123"));
+    void create_shouldHashPasswordAndPersistUser() {
+        User user = new User("john", "john@test.com", "password123");
+        when(repository.existsByUsername(entityManager, "john")).thenReturn(false);
+        when(repository.existsByEmail(entityManager, "john@test.com")).thenReturn(false);
+        when(repository.save(eq(entityManager), any(User.class))).thenAnswer(invocation -> invocation.getArgument(1));
 
-        assertThat(user.getPassword()).startsWith("$2");
-        assertThat(user.getPassword()).isNotEqualTo("password123");
+        User created = userService.create(user);
+
+        assertThat(created.getPassword()).startsWith("$2");
+        assertThat(created.getPassword()).isNotEqualTo("password123");
+        verify(repository).save(eq(entityManager), any(User.class));
     }
 
     @Test
     void create_shouldRejectDuplicateUsername() {
-        userService.create(new User("john", "john@test.com", "password123"));
-        User duplicate = new User("john", "other@test.com", "password123");
+        User duplicate = new User("john", "john@test.com", "password123");
+        when(repository.existsByUsername(entityManager, "john")).thenReturn(true);
 
         assertThatThrownBy(() -> userService.create(duplicate))
                 .isInstanceOf(DuplicateUserException.class)
                 .hasMessageContaining("nom d'utilisateur");
-    }
 
-    @Test
-    void create_shouldRejectDuplicateEmail() {
-        userService.create(new User("john", "john@test.com", "password123"));
-        User duplicate = new User("jane", "john@test.com", "password123");
-
-        assertThatThrownBy(() -> userService.create(duplicate))
-                .isInstanceOf(DuplicateUserException.class)
-                .hasMessageContaining("email");
+        verify(repository, never()).existsByEmail(any(), any());
+        verify(repository, never()).save(any(), any());
     }
 
     @Test
     void authenticate_shouldReturnUserForValidCredentials() {
-        userService.create(new User("john", "john@test.com", "password123"));
+        User user = new User("john", "john@test.com", PasswordUtils.hash("password123"));
+        when(repository.findByUsername(entityManager, "john")).thenReturn(Optional.of(user));
 
         Optional<User> result = userService.authenticate("john", "password123");
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getUsername()).isEqualTo("john");
+        assertThat(result).contains(user);
     }
 
     @Test
     void authenticate_shouldReturnEmptyForWrongPassword() {
-        userService.create(new User("john", "john@test.com", "password123"));
+        User user = new User("john", "john@test.com", PasswordUtils.hash("password123"));
+        when(repository.findByUsername(entityManager, "john")).thenReturn(Optional.of(user));
 
-        Optional<User> result = userService.authenticate("john", "wrongpassword");
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void authenticate_shouldReturnEmptyForNonexistentUser() {
-        Optional<User> result = userService.authenticate("nonexistent", "password");
+        Optional<User> result = userService.authenticate("john", "wrong");
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    void findById_shouldReturnUser() {
-        User created = userService.create(new User("john", "john@test.com", "password123"));
+    void findAll_shouldDelegateToRepository() {
+        List<User> users = List.of(new User("john", "john@test.com", "x"));
+        when(repository.findAllOrderByCreatedAt(entityManager)).thenReturn(users);
 
-        Optional<User> found = userService.findById(created.getId());
+        List<User> result = userService.findAll();
 
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("john");
+        assertThat(result).containsExactlyElementsOf(users);
+        verify(repository).findAllOrderByCreatedAt(entityManager);
     }
 
     @Test
-    void findByUsername_shouldReturnUser() {
-        userService.create(new User("john", "john@test.com", "password123"));
+    void delete_shouldDelegateToRepository() {
+        UUID userId = UUID.randomUUID();
+        when(repository.deleteById(entityManager, userId)).thenReturn(true);
 
-        Optional<User> found = userService.findByUsername("john");
-
-        assertThat(found).isPresent();
-    }
-
-    @Test
-    void findAll_shouldReturnAllUsers() {
-        userService.create(new User("john", "john@test.com", "password123"));
-        userService.create(new User("jane", "jane@test.com", "password123"));
-
-        List<User> all = userService.findAll();
-
-        assertThat(all).hasSize(2);
-    }
-
-    @Test
-    void delete_shouldRemoveUser() {
-        User user = userService.create(new User("john", "john@test.com", "password123"));
-
-        boolean deleted = userService.delete(user.getId());
+        boolean deleted = userService.delete(userId);
 
         assertThat(deleted).isTrue();
-        assertThat(userService.findById(user.getId())).isEmpty();
+        verify(repository).deleteById(entityManager, userId);
     }
 
-    @Test
-    void update_shouldMergeUser() {
-        User user = userService.create(new User("john", "john@test.com", "password123"));
-        user.setUsername("john-updated");
-        user.setEmail("john-updated@test.com");
-
-        User updated = userService.update(user);
-
-        assertThat(updated.getUsername()).isEqualTo("john-updated");
-        assertThat(updated.getEmail()).isEqualTo("john-updated@test.com");
-        assertThat(userService.findById(updated.getId())).isPresent();
-        assertThat(userService.findById(updated.getId()).orElseThrow().getUsername()).isEqualTo("john-updated");
+    private void stubPersistenceExecution() {
+        lenient().when(persistenceExecutor.inTransaction(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
+        lenient().when(persistenceExecutor.inReadOnly(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
     }
 }

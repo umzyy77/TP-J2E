@@ -2,6 +2,10 @@
 
 Backend Java/Jakarta EE expose en API REST JSON, securise via JAAS + Bearer token.
 
+## Consigne TP
+
+- Redirection vers le sujet: [TP_AIR_3_Backend_API](./fichier%20md%20prog%20java%202e/semaine%203/TP_AIR_3_Backend_API.md)
+
 ## Stack
 
 - Java 25
@@ -25,7 +29,7 @@ Client HTTP -> Resource (JAX-RS) -> Service (metier + transactions) -> Repositor
 - `PUT /api/annonces/{id}` (auth)
 - `PATCH /api/annonces/{id}` (auth)
 - `DELETE /api/annonces/{id}` (auth)
-- `GET /api/openapi` : spec OpenAPI YAML
+- `GET /api/openapi` : spec OpenAPI JSON
 
 ## Regles metier cle
 
@@ -61,7 +65,7 @@ mvn verify
 ## OpenAPI
 
 - Source: `src/main/resources/openapi.yaml`
-- Exposition HTTP: `GET /api/openapi`
+- Exposition HTTP (JSON): `GET /api/openapi`
 
 ## Test de charge simple
 

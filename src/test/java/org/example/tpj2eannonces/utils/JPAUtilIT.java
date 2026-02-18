@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
-class JPAUtilTest {
+class JPAUtilIT {
 
     @BeforeAll
     static void setUp() {
@@ -60,3 +60,4 @@ class JPAUtilTest {
         em2.close();
     }
 }
+

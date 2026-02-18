@@ -1,6 +1,7 @@
 package org.example.tpj2eannonces.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,33 +14,40 @@ import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.repository.AnnonceRepository;
-import org.example.tpj2eannonces.utils.JPAUtil;
+import org.example.tpj2eannonces.utils.JpaPersistenceExecutor;
+import org.example.tpj2eannonces.utils.PersistenceExecutor;
 
 public class AnnonceService {
 
     private static final String ANNONCE_NOT_FOUND = "Annonce non trouvee: ";
 
     private final AnnonceRepository repository;
+    private final PersistenceExecutor persistenceExecutor;
 
     public AnnonceService() {
-        this.repository = new AnnonceRepository();
+        this(new AnnonceRepository(), new JpaPersistenceExecutor());
     }
 
     public AnnonceService(AnnonceRepository repository) {
-        this.repository = repository;
+        this(repository, new JpaPersistenceExecutor());
+    }
+
+    public AnnonceService(AnnonceRepository repository, PersistenceExecutor persistenceExecutor) {
+        this.repository = Objects.requireNonNull(repository);
+        this.persistenceExecutor = Objects.requireNonNull(persistenceExecutor);
     }
 
     public Annonce create(Annonce annonce, UUID authorId, Long categoryId) {
-        return JPAUtil.inTransaction(em -> repository.saveWithRelations(em, annonce, authorId, categoryId));
+        return persistenceExecutor.inTransaction(em -> repository.saveWithRelations(em, annonce, authorId, categoryId));
     }
 
     public Annonce update(Annonce annonce) {
-        return JPAUtil.inTransaction(em -> repository.update(em, annonce));
+        return persistenceExecutor.inTransaction(em -> repository.update(em, annonce));
     }
 
     public Annonce updateFields(Long annonceId, UUID currentUserId, String title, String description,
                                 String adress, String mail, Long categoryId) {
-        return JPAUtil.inTransaction(em -> {
+        return persistenceExecutor.inTransaction(em -> {
             Annonce existing = repository.findById(em, annonceId)
                     .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
@@ -67,7 +75,7 @@ public class AnnonceService {
     }
 
     public Annonce changeStatus(Long annonceId, UUID currentUserId, String action) {
-        return JPAUtil.inTransaction(em -> {
+        return persistenceExecutor.inTransaction(em -> {
             Annonce annonce = repository.findById(em, annonceId)
                     .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
@@ -81,16 +89,12 @@ public class AnnonceService {
             }
 
             AnnonceStatus targetStatus = expectedCurrentStatus.getNextStatus();
-            if (targetStatus == null) {
-                throw new InvalidTransitionException(action);
-            }
-
             return repository.updateStatus(em, annonceId, targetStatus);
         });
     }
 
     public boolean delete(Long annonceId, UUID currentUserId) {
-        return JPAUtil.inTransaction(em -> {
+        return persistenceExecutor.inTransaction(em -> {
             Annonce existing = repository.findById(em, annonceId)
                     .orElseThrow(() -> new NotFoundException(ANNONCE_NOT_FOUND + annonceId));
 
@@ -111,11 +115,11 @@ public class AnnonceService {
     }
 
     public Optional<Annonce> findById(Long id) {
-        return JPAUtil.inReadOnly(em -> repository.findById(em, id));
+        return persistenceExecutor.inReadOnly(em -> repository.findById(em, id));
     }
 
     public Optional<Annonce> findByIdWithRelations(Long id) {
-        return JPAUtil.inReadOnly(em -> repository.findByIdWithRelations(em, id));
+        return persistenceExecutor.inReadOnly(em -> repository.findByIdWithRelations(em, id));
     }
 
     public List<Annonce> findAll(int page, int size) {
@@ -135,7 +139,7 @@ public class AnnonceService {
     }
 
     public long count() {
-        return JPAUtil.inReadOnly(repository::count);
+        return persistenceExecutor.inReadOnly(repository::count);
     }
 
     public long countPublished() {
@@ -143,11 +147,11 @@ public class AnnonceService {
     }
 
     public List<Annonce> findByAuthor(UUID authorId, int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findByAuthor(em, authorId, page, size));
+        return persistenceExecutor.inReadOnly(em -> repository.findByAuthor(em, authorId, page, size));
     }
 
     public long countByAuthor(UUID authorId) {
-        return JPAUtil.inReadOnly(em -> repository.countByAuthor(em, authorId));
+        return persistenceExecutor.inReadOnly(em -> repository.countByAuthor(em, authorId));
     }
 
     public List<Annonce> findByFilters(Long categoryId, AnnonceStatus status, int page, int size) {
@@ -159,10 +163,10 @@ public class AnnonceService {
     }
 
     public List<Annonce> searchByFilters(String keyword, Long categoryId, AnnonceStatus status, int page, int size) {
-        return JPAUtil.inReadOnly(em -> repository.findByFilters(em, keyword, categoryId, status, page, size));
+        return persistenceExecutor.inReadOnly(em -> repository.findByFilters(em, keyword, categoryId, status, page, size));
     }
 
     public long countBySearchAndFilters(String keyword, Long categoryId, AnnonceStatus status) {
-        return JPAUtil.inReadOnly(em -> repository.countByFilters(em, keyword, categoryId, status));
+        return persistenceExecutor.inReadOnly(em -> repository.countByFilters(em, keyword, categoryId, status));
     }
 }

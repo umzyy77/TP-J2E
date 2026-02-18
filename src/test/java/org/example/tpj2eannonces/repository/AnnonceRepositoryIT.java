@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.example.tpj2eannonces.exception.NotFoundException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
@@ -18,7 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import jakarta.persistence.EntityManager;
 
-class AnnonceRepositoryTest {
+class AnnonceRepositoryIT {
 
     private AnnonceRepository repository;
     private UserRepository userRepository;
@@ -99,6 +101,42 @@ class AnnonceRepositoryTest {
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
+    }
+
+    @Test
+    void saveWithRelations_shouldRejectNullAuthorId() {
+        Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
+        Long categoryId = defaultCategory.getId();
+
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            assertThatThrownBy(() -> repository.saveWithRelations(em, annonce, null, categoryId))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessageContaining("Auteur obligatoire");
+        }
+    }
+
+    @Test
+    void saveWithRelations_shouldRejectNullCategoryId() {
+        Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
+        var authorId = defaultAuthor.getId();
+
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            assertThatThrownBy(() -> repository.saveWithRelations(em, annonce, authorId, null))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessageContaining("Categorie obligatoire");
+        }
+    }
+
+    @Test
+    void saveWithRelations_shouldRejectUnknownCategory() {
+        Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
+        var authorId = defaultAuthor.getId();
+
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            assertThatThrownBy(() -> repository.saveWithRelations(em, annonce, authorId, 99999L))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessageContaining("Categorie non trouvee");
+        }
     }
 
     @Test
@@ -247,6 +285,17 @@ class AnnonceRepositoryTest {
     }
 
     @Test
+    void updateStatus_shouldThrowWhenAnnonceDoesNotExist() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            em.getTransaction().begin();
+            assertThatThrownBy(() -> repository.updateStatus(em, 99999L, AnnonceStatus.PUBLISHED))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessageContaining("Annonce non trouvee");
+            em.getTransaction().rollback();
+        }
+    }
+
+    @Test
     void countByFilters_shouldReturnCorrectCount() {
         saveAnnonce("Draft 1", "Desc", "Addr", "mail@test.com");
         saveAnnonce("Draft 2", "Desc", "Addr", "mail2@test.com");
@@ -267,6 +316,28 @@ class AnnonceRepositoryTest {
     }
 
     @Test
+    void countByKeyword_shouldReturnMatchingCount() {
+        saveAnnonce("Voiture rouge", "Desc", "Addr", "mail1@test.com");
+        saveAnnonce("Appartement", "Desc", "Addr", "mail2@test.com");
+
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            long count = repository.countByKeyword(em, "voiture");
+            assertThat(count).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void searchByKeyword_shouldIgnoreBlankKeyword() {
+        saveAnnonce("Voiture rouge", "Desc", "Addr", "mail1@test.com");
+        saveAnnonce("Appartement", "Desc", "Addr", "mail2@test.com");
+
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            List<Annonce> results = repository.searchByKeyword(em, "   ", 0, 100);
+            assertThat(results).hasSize(2);
+        }
+    }
+
+    @Test
     void count_shouldReturnTotalCount() {
         saveAnnonce("Titre 1", "Desc", "Addr", "mail@test.com");
         saveAnnonce("Titre 2", "Desc", "Addr", "mail2@test.com");
@@ -277,3 +348,4 @@ class AnnonceRepositoryTest {
         }
     }
 }
+

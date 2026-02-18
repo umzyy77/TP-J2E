@@ -17,6 +17,8 @@ import org.example.tpj2eannonces.api.exception.ForbiddenExceptionMapper;
 import org.example.tpj2eannonces.api.exception.GenericExceptionMapper;
 import org.example.tpj2eannonces.api.exception.JsonParseExceptionMapper;
 import org.example.tpj2eannonces.api.exception.NotFoundExceptionMapper;
+import org.example.tpj2eannonces.api.exception.OptimisticLockExceptionMapper;
+import org.example.tpj2eannonces.api.exception.RollbackExceptionMapper;
 import org.example.tpj2eannonces.api.exception.ValidationExceptionMapper;
 import org.example.tpj2eannonces.api.security.SecurityFilter;
 import org.example.tpj2eannonces.model.Category;
@@ -58,6 +60,8 @@ class AnnonceResourceIT extends JerseyTest {
                 .register(NotFoundExceptionMapper.class)
                 .register(ConflictExceptionMapper.class)
                 .register(ForbiddenExceptionMapper.class)
+                .register(OptimisticLockExceptionMapper.class)
+                .register(RollbackExceptionMapper.class)
                 .register(GenericExceptionMapper.class)
                 .register(JsonParseExceptionMapper.class)
                 .register(JacksonFeature.class)
@@ -289,6 +293,22 @@ class AnnonceResourceIT extends JerseyTest {
         Response response = target("/annonces")
                 .request(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Basic xyz")
+                .post(Entity.json(dto));
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        ApiErrorDTO error = response.readEntity(ApiErrorDTO.class);
+        assertThat(error.error()).isEqualTo("UNAUTHORIZED");
+        response.close();
+    }
+
+    @Test
+    void create_shouldReturn401ForInvalidToken() {
+        AnnonceCreateDTO dto = new AnnonceCreateDTO(
+                "Titre", "Desc", "Adresse", "mail@test.com", testCategory.getId());
+
+        Response response = target("/annonces")
+                .request(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer invalid-token")
                 .post(Entity.json(dto));
 
         assertThat(response.getStatus()).isEqualTo(401);

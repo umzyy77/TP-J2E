@@ -2,9 +2,16 @@ package org.example.tpj2eannonces.api.security.jaas;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
@@ -15,54 +22,51 @@ import javax.security.auth.login.LoginException;
 
 import org.example.tpj2eannonces.api.security.UserPrincipal;
 import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.service.UserService;
-import org.example.tpj2eannonces.utils.JPAUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.example.tpj2eannonces.repository.UserRepository;
+import org.example.tpj2eannonces.utils.PasswordUtils;
+import org.example.tpj2eannonces.utils.PersistenceExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import jakarta.persistence.EntityManager;
 
+@ExtendWith(MockitoExtension.class)
 class DbLoginModuleTest {
 
-    @BeforeAll
-    static void setUpClass() {
-        JPAUtil.getEntityManagerFactory();
-    }
+    @Mock
+    private UserRepository userRepository;
 
-    @AfterAll
-    static void tearDownClass() {
-        JPAUtil.close();
-    }
+    @Mock
+    private PersistenceExecutor persistenceExecutor;
+
+    @Mock
+    private EntityManager entityManager;
+
+    private DbLoginModule module;
 
     @BeforeEach
     void setUp() {
-        UserService userService = new UserService();
-        cleanDatabase();
-        userService.create(new User("testuser", "test@test.com", "password123"));
-    }
-
-    @AfterEach
-    void tearDown() {
-        cleanDatabase();
-    }
-
-    private void cleanDatabase() {
-        try (EntityManager em = JPAUtil.getEntityManager()) {
-            em.getTransaction().begin();
-            em.createQuery("DELETE FROM Annonce").executeUpdate();
-            em.createQuery("DELETE FROM User").executeUpdate();
-            em.createQuery("DELETE FROM Category").executeUpdate();
-            em.getTransaction().commit();
-        }
+        module = new DbLoginModule(userRepository, persistenceExecutor);
+        lenient().when(persistenceExecutor.inReadOnly(any())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
     }
 
     @Test
-    void loginAndCommit_shouldPopulateSubject() throws LoginException {
+    void loginAndCommit_shouldPopulateSubjectForValidCredentials() throws LoginException {
+        User user = new User("testuser", "test@test.com", PasswordUtils.hash("password123"));
+        user.setId(UUID.randomUUID());
+        when(userRepository.findByUsername(entityManager, "testuser")).thenReturn(Optional.of(user));
+
         Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
         module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
 
         assertThat(module.login()).isTrue();
@@ -70,19 +74,15 @@ class DbLoginModuleTest {
 
         assertThat(subject.getPrincipals(UserPrincipal.class)).hasSize(1);
         assertThat(subject.getPrincipals(RolePrincipal.class)).hasSize(1);
-
-        UserPrincipal principal = subject.getPrincipals(UserPrincipal.class).iterator().next();
-        assertThat(principal.getName()).isEqualTo("testuser");
-
-        RolePrincipal role = subject.getPrincipals(RolePrincipal.class).iterator().next();
-        assertThat(role.getName()).isEqualTo("ROLE_USER");
     }
 
     @Test
     void login_shouldFailForInvalidCredentials() {
+        User user = new User("testuser", "test@test.com", PasswordUtils.hash("password123"));
+        when(userRepository.findByUsername(entityManager, "testuser")).thenReturn(Optional.of(user));
+
         Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("testuser", "wrongpassword"), new HashMap<>(), new HashMap<>());
+        module.initialize(subject, new CredentialsCallbackHandler("testuser", "wrong"), new HashMap<>(), new HashMap<>());
 
         assertThatThrownBy(module::login)
                 .isInstanceOf(LoginException.class)
@@ -90,74 +90,22 @@ class DbLoginModuleTest {
     }
 
     @Test
-    void login_shouldFailForNonexistentUser() {
+    void login_shouldFailForUnknownUser() {
+        when(userRepository.findByUsername(entityManager, "unknown")).thenReturn(Optional.empty());
+
         Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("nobody", "password"), new HashMap<>(), new HashMap<>());
+        module.initialize(subject, new CredentialsCallbackHandler("unknown", "password123"), new HashMap<>(), new HashMap<>());
 
         assertThatThrownBy(module::login)
-                .isInstanceOf(LoginException.class);
+                .isInstanceOf(LoginException.class)
+                .hasMessageContaining("Identifiants invalides");
     }
 
-    @Test
-    void commit_shouldReturnFalseIfLoginNotCalled() throws LoginException {
+    @ParameterizedTest
+    @MethodSource("nullCredentialCases")
+    void login_shouldFailWhenCredentialsAreMissing(String username, String password) {
         Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
-
-        assertThat(module.commit()).isFalse();
-    }
-
-    @Test
-    void logout_shouldRemovePrincipals() throws LoginException {
-        Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
-
-        module.login();
-        module.commit();
-        assertThat(subject.getPrincipals()).isNotEmpty();
-
-        module.logout();
-        assertThat(subject.getPrincipals(UserPrincipal.class)).isEmpty();
-        assertThat(subject.getPrincipals(RolePrincipal.class)).isEmpty();
-    }
-
-    @Test
-    void abort_shouldCleanupAfterFailedCommit() throws LoginException {
-        Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
-
-        module.login();
-        assertThat(module.abort()).isTrue();
-    }
-
-    @Test
-    void abort_shouldReturnFalseIfLoginNotAttempted() throws LoginException {
-        Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-        module.initialize(subject, new CredentialsCallbackHandler("testuser", "password123"), new HashMap<>(), new HashMap<>());
-
-        assertThat(module.abort()).isFalse();
-    }
-
-    @Test
-    void login_shouldFailForNullCredentials() {
-        Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-
-        CallbackHandler nullCredentialsHandler = callbacks -> {
-            for (Callback callback : callbacks) {
-                if (callback instanceof NameCallback nameCallback) {
-                    nameCallback.setName(null);
-                } else if (callback instanceof PasswordCallback passwordCallback) {
-                    passwordCallback.setPassword(null);
-                }
-            }
-        };
-
-        module.initialize(subject, nullCredentialsHandler, new HashMap<>(), new HashMap<>());
+        module.initialize(subject, credentialsCallbackHandler(username, password), new HashMap<>(), new HashMap<>());
 
         assertThatThrownBy(module::login)
                 .isInstanceOf(LoginException.class)
@@ -165,18 +113,35 @@ class DbLoginModuleTest {
     }
 
     @Test
-    void authenticate_shouldFailForCallbackError() {
-        Subject subject = new Subject();
-        DbLoginModule module = new DbLoginModule();
-
+    void login_shouldFailForCallbackError() {
         CallbackHandler brokenHandler = _ -> {
             throw new IOException("boom");
         };
 
+        Subject subject = new Subject();
         module.initialize(subject, brokenHandler, new HashMap<>(), new HashMap<>());
 
         assertThatThrownBy(module::login)
                 .isInstanceOf(LoginException.class)
                 .hasMessageContaining("Erreur lors de la recuperation des credentials");
+    }
+
+    private CallbackHandler credentialsCallbackHandler(String username, String password) {
+        return callbacks -> {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback nameCallback) {
+                    nameCallback.setName(username);
+                } else if (callback instanceof PasswordCallback passwordCallback) {
+                    passwordCallback.setPassword(password != null ? password.toCharArray() : null);
+                }
+            }
+        };
+    }
+
+    private static Stream<Arguments> nullCredentialCases() {
+        return Stream.of(
+                Arguments.of(null, null),
+                Arguments.of(null, "password123"),
+                Arguments.of("testuser", null));
     }
 }

@@ -32,4 +32,16 @@ class CategoryModelTest {
 
         assertThat(category.getAnnonces()).hasSize(1);
     }
+
+    @Test
+    void hashCode_shouldBeEqualForCategoriesWithSameId() {
+        Category first = new Category("Auto");
+        Category second = new Category("Services");
+        first.setId(10L);
+        second.setId(10L);
+
+        assertThat(first)
+                .isEqualTo(second)
+                .hasSameHashCodeAs(second);
+    }
 }

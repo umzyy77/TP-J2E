@@ -31,7 +31,7 @@ public class AppContextListener implements ServletContextListener {
             return;
         }
 
-        URL jaasConfig = getClass().getClassLoader().getResource("jaas.conf");
+        URL jaasConfig = findJaasConfig();
         if (jaasConfig != null) {
             String configPath = jaasConfig.toExternalForm();
             System.setProperty("java.security.auth.login.config", configPath);
@@ -39,6 +39,10 @@ public class AppContextListener implements ServletContextListener {
         } else {
             logger.warn("Fichier jaas.conf introuvable dans le classpath");
         }
+    }
+
+    protected URL findJaasConfig() {
+        return getClass().getClassLoader().getResource("jaas.conf");
     }
 
     @Override

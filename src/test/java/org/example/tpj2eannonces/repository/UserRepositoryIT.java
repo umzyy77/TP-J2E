@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import jakarta.persistence.EntityManager;
 
-class UserRepositoryTest {
+class UserRepositoryIT {
 
     private UserRepository repository;
 
@@ -105,3 +105,4 @@ class UserRepositoryTest {
         }
     }
 }
+

@@ -9,10 +9,13 @@ import org.example.tpj2eannonces.exception.ConflictException;
 import org.example.tpj2eannonces.exception.ForbiddenException;
 import org.example.tpj2eannonces.exception.NotFoundException;
 import org.example.tpj2eannonces.exception.annonce.AnnonceImmutableException;
+import org.hibernate.StaleStateException;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonParseException;
 
+import jakarta.persistence.OptimisticLockException;
+import jakarta.persistence.RollbackException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -116,6 +119,56 @@ class ExceptionMappersTest {
             ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
             assertThat(error.error()).isEqualTo("VALIDATION_ERROR");
             assertThat(error.messages()).contains("name: name required");
+        }
+    }
+
+    @Test
+    void optimisticLockExceptionMapper_shouldReturn409() {
+        OptimisticLockExceptionMapper mapper = new OptimisticLockExceptionMapper();
+
+        try (Response response = mapper.toResponse(new OptimisticLockException("Version stale"))) {
+            assertThat(response.getStatus()).isEqualTo(409);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("CONFLICT");
+        }
+    }
+
+    @Test
+    void rollbackExceptionMapper_shouldReturn409WhenOptimisticConflict() {
+        RollbackExceptionMapper mapper = new RollbackExceptionMapper();
+        RollbackException rollback = new RollbackException(
+                "Transaction rollback", new OptimisticLockException("Version stale"));
+
+        try (Response response = mapper.toResponse(rollback)) {
+            assertThat(response.getStatus()).isEqualTo(409);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("CONFLICT");
+        }
+    }
+
+    @Test
+    void rollbackExceptionMapper_shouldReturn500WhenNotOptimisticConflict() {
+        RollbackExceptionMapper mapper = new RollbackExceptionMapper();
+        RollbackException rollback = new RollbackException(
+                "Transaction rollback", new RuntimeException("Other cause"));
+
+        try (Response response = mapper.toResponse(rollback)) {
+            assertThat(response.getStatus()).isEqualTo(500);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("INTERNAL_ERROR");
+        }
+    }
+
+    @Test
+    void rollbackExceptionMapper_shouldReturn409WhenHibernateStaleStateException() {
+        RollbackExceptionMapper mapper = new RollbackExceptionMapper();
+        RollbackException rollback = new RollbackException(
+                "Transaction rollback", new StaleStateException("stale"));
+
+        try (Response response = mapper.toResponse(rollback)) {
+            assertThat(response.getStatus()).isEqualTo(409);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("CONFLICT");
         }
     }
 

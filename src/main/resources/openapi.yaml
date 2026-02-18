@@ -271,17 +271,15 @@ paths:
   /openapi:
     get:
       tags: [Auth]
-      summary: Recuperer la specification OpenAPI YAML
+      summary: Recuperer la specification OpenAPI en JSON
       responses:
         '200':
           description: Specification OpenAPI
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-            application/yaml:
-              schema:
-                type: string
+                type: object
+                additionalProperties: true
 components:
   securitySchemes:
     bearerAuth:

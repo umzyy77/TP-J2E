@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import jakarta.persistence.EntityManager;
 
-class EntityMappingTest {
+class EntityMappingIT {
 
     private EntityManager em;
 
@@ -162,3 +162,4 @@ class EntityMappingTest {
         assertThat(foundUser.getAnnonces()).hasSize(2);
     }
 }
+

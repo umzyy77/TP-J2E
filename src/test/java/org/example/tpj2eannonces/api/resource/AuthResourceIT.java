@@ -11,6 +11,8 @@ import org.example.tpj2eannonces.api.exception.ForbiddenExceptionMapper;
 import org.example.tpj2eannonces.api.exception.GenericExceptionMapper;
 import org.example.tpj2eannonces.api.exception.JsonParseExceptionMapper;
 import org.example.tpj2eannonces.api.exception.NotFoundExceptionMapper;
+import org.example.tpj2eannonces.api.exception.OptimisticLockExceptionMapper;
+import org.example.tpj2eannonces.api.exception.RollbackExceptionMapper;
 import org.example.tpj2eannonces.api.exception.ValidationExceptionMapper;
 import org.example.tpj2eannonces.api.security.SecurityFilter;
 import org.example.tpj2eannonces.model.User;
@@ -42,6 +44,8 @@ class AuthResourceIT extends JerseyTest {
                 .register(NotFoundExceptionMapper.class)
                 .register(ConflictExceptionMapper.class)
                 .register(ForbiddenExceptionMapper.class)
+                .register(OptimisticLockExceptionMapper.class)
+                .register(RollbackExceptionMapper.class)
                 .register(GenericExceptionMapper.class)
                 .register(JsonParseExceptionMapper.class)
                 .register(JacksonFeature.class)

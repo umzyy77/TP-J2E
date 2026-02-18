@@ -3,11 +3,13 @@ package org.example.tpj2eannonces.api.security.jaas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.security.auth.Subject;
+import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.login.LoginException;
 
 import org.example.tpj2eannonces.api.security.TokenStore;
@@ -114,6 +116,21 @@ class TokenLoginModuleTest {
         assertThat(module.abort()).isTrue();
         assertThat(subject.getPrincipals(UserPrincipal.class)).isEmpty();
         assertThat(subject.getPrincipals(RolePrincipal.class)).isEmpty();
+    }
+
+    @Test
+    void login_shouldFailForCallbackError() {
+        CallbackHandler brokenHandler = _ -> {
+            throw new IOException("boom");
+        };
+
+        Subject subject = new Subject();
+        TokenLoginModule module = new TokenLoginModule();
+        module.initialize(subject, brokenHandler, new HashMap<>(), new HashMap<>());
+
+        assertThatThrownBy(module::login)
+                .isInstanceOf(LoginException.class)
+                .hasMessageContaining("Erreur lors de la recuperation du token");
     }
 
     private static Stream<Arguments> invalidTokenCases() {

@@ -19,11 +19,12 @@ class OpenApiResourceIT extends JerseyTest {
     }
 
     @Test
-    void openApi_shouldReturnYamlContent() {
-        try (Response response = target("/openapi").request(MediaType.TEXT_PLAIN).get()) {
+    void openApi_shouldReturnJsonContent() {
+        try (Response response = target("/openapi").request(MediaType.APPLICATION_JSON).get()) {
             assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(response.getMediaType().toString()).startsWith(MediaType.APPLICATION_JSON);
             String body = response.readEntity(String.class);
-            assertThat(body).contains("openapi: 3.0.3");
+            assertThat(body).contains("\"openapi\":\"3.0.3\"");
         }
     }
 }
