@@ -188,7 +188,11 @@ class ExceptionMappersTest {
 
     private static class ValidatedPayload {
 
+        @NotBlank(message = "name required")
+        private final String name;
+
         private ValidatedPayload(String name) {
+            this.name = name;
         }
     }
 }
