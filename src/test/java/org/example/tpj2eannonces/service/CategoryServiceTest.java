@@ -2,103 +2,120 @@ package org.example.tpj2eannonces.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.example.tpj2eannonces.model.Annonce;
+import java.util.List;
+import java.util.function.Function;
+
+import org.example.tpj2eannonces.exception.category.CategoryInUseException;
+import org.example.tpj2eannonces.exception.category.DuplicateCategoryException;
 import org.example.tpj2eannonces.model.Category;
-import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.utils.JPAUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.example.tpj2eannonces.repository.CategoryRepository;
+import org.example.tpj2eannonces.utils.PersistenceExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import jakarta.persistence.EntityManager;
 
+@ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
 
-    private CategoryService service;
+    @Mock
+    private CategoryRepository repository;
 
-    @BeforeAll
-    static void setUpClass() {
-        JPAUtil.getEntityManagerFactory();
-    }
+    @Mock
+    private PersistenceExecutor persistenceExecutor;
 
-    @AfterAll
-    static void tearDownClass() {
-        JPAUtil.close();
-    }
+    @Mock
+    private EntityManager entityManager;
+
+    private CategoryService categoryService;
 
     @BeforeEach
     void setUp() {
-        service = new CategoryService();
-        cleanDatabase();
-    }
-
-    @AfterEach
-    void tearDown() {
-        cleanDatabase();
-    }
-
-    private void cleanDatabase() {
-        try (EntityManager em = JPAUtil.getEntityManager()) {
-            em.getTransaction().begin();
-            em.createQuery("DELETE FROM Annonce").executeUpdate();
-            em.createQuery("DELETE FROM User").executeUpdate();
-            em.createQuery("DELETE FROM Category").executeUpdate();
-            em.getTransaction().commit();
-        }
+        categoryService = new CategoryService(repository, persistenceExecutor);
+        stubPersistenceExecution();
     }
 
     @Test
-    void create_shouldPersistCategory() {
+    void constructor_withRepositoryOnly_shouldCreateService() {
+        CategoryService service = new CategoryService(repository);
+
+        assertThat(service).isNotNull();
+    }
+
+    @Test
+    void create_shouldPersistCategoryWhenLabelIsUnique() {
         Category category = new Category("Immobilier");
+        when(repository.existsByLabel(entityManager, "Immobilier")).thenReturn(false);
+        when(repository.save(entityManager, category)).thenReturn(category);
 
-        Category created = service.create(category);
+        Category created = categoryService.create(category);
 
-        assertThat(created.getId()).isNotNull();
-        assertThat(created.getLabel()).isEqualTo("Immobilier");
+        assertThat(created).isSameAs(category);
+        verify(repository).save(entityManager, category);
     }
 
     @Test
-    void create_shouldRejectDuplicates() {
-        service.create(new Category("Immobilier"));
-        Category duplicateCategory = new Category("Immobilier");
+    void create_shouldRejectDuplicateLabel() {
+        Category category = new Category("Immobilier");
+        when(repository.existsByLabel(entityManager, "Immobilier")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(duplicateCategory))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("existe");
+        assertThatThrownBy(() -> categoryService.create(category))
+                .isInstanceOf(DuplicateCategoryException.class)
+                .hasMessageContaining("Immobilier");
+
+        verify(repository, never()).save(any(), any());
     }
 
     @Test
-    void delete_shouldPreventIfAnnoncesExist() {
-        Category category = service.create(new Category("Immobilier"));
-        Long categoryId = category.getId();
+    void delete_shouldRejectCategoryInUse() {
+        when(repository.countAnnoncesByCategory(entityManager, 10L)).thenReturn(2L);
 
-        try (EntityManager em = JPAUtil.getEntityManager()) {
-            em.getTransaction().begin();
-            User author = new User("catowner", "catowner@test.com", "password");
-            em.persist(author);
+        assertThatThrownBy(() -> categoryService.delete(10L))
+                .isInstanceOf(CategoryInUseException.class)
+                .hasMessageContaining("2 annonce(s)");
 
-            Annonce annonce = new Annonce("Test", "Desc", "Addr", "mail@test.com");
-            annonce.setAuthor(author);
-            annonce.setCategory(em.find(Category.class, categoryId));
-            em.persist(annonce);
-            em.getTransaction().commit();
-        }
-
-        assertThatThrownBy(() -> service.delete(categoryId))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("annonce(s)");
+        verify(repository, never()).deleteById(any(), any());
     }
 
     @Test
-    void findByLabel_shouldReturnCategory() {
-        service.create(new Category("Auto"));
+    void delete_shouldDelegateWhenCategoryIsUnused() {
+        when(repository.countAnnoncesByCategory(entityManager, 10L)).thenReturn(0L);
+        when(repository.deleteById(entityManager, 10L)).thenReturn(true);
 
-        var found = service.findByLabel("Auto");
+        boolean deleted = categoryService.delete(10L);
 
-        assertThat(found).isPresent();
-        assertThat(found.get().getLabel()).isEqualTo("Auto");
+        assertThat(deleted).isTrue();
+        verify(repository).deleteById(entityManager, 10L);
+    }
+
+    @Test
+    void findAll_shouldDelegateToRepository() {
+        List<Category> categories = List.of(new Category("Auto"), new Category("Services"));
+        when(repository.findAllOrderByLabel(entityManager)).thenReturn(categories);
+
+        List<Category> result = categoryService.findAll();
+
+        assertThat(result).containsExactlyElementsOf(categories);
+        verify(repository).findAllOrderByLabel(entityManager);
+    }
+
+    private void stubPersistenceExecution() {
+        lenient().when(persistenceExecutor.inTransaction(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
+        lenient().when(persistenceExecutor.inReadOnly(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
     }
 }

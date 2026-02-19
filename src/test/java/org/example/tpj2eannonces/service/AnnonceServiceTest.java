@@ -1,175 +1,221 @@
 package org.example.tpj2eannonces.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
+
+import org.example.tpj2eannonces.exception.ForbiddenException;
+import org.example.tpj2eannonces.exception.NotFoundException;
+import org.example.tpj2eannonces.exception.annonce.AnnonceImmutableException;
+import org.example.tpj2eannonces.exception.annonce.ArchiveRequiredException;
+import org.example.tpj2eannonces.exception.annonce.InvalidTransitionException;
 import org.example.tpj2eannonces.model.Annonce;
 import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
-import org.example.tpj2eannonces.repository.RepositoryException;
-import org.example.tpj2eannonces.utils.JPAUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.example.tpj2eannonces.repository.AnnonceRepository;
+import org.example.tpj2eannonces.utils.PersistenceExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import jakarta.persistence.EntityManager;
 
+@ExtendWith(MockitoExtension.class)
 class AnnonceServiceTest {
 
+    @Mock
+    private AnnonceRepository repository;
+
+    @Mock
+    private PersistenceExecutor persistenceExecutor;
+
+    @Mock
+    private EntityManager entityManager;
+
     private AnnonceService annonceService;
-    private UserService userService;
-    private CategoryService categoryService;
-    private User defaultAuthor;
-    private Category defaultCategory;
-
-    @BeforeAll
-    static void setUpClass() {
-        JPAUtil.getEntityManagerFactory();
-    }
-
-    @AfterAll
-    static void tearDownClass() {
-        JPAUtil.close();
-    }
 
     @BeforeEach
     void setUp() {
-        annonceService = new AnnonceService();
-        userService = new UserService();
-        categoryService = new CategoryService();
-        cleanDatabase();
-        defaultAuthor = userService.create(new User("author", "author@test.com", "password"));
-        defaultCategory = categoryService.create(new Category("Immobilier"));
-    }
-
-    @AfterEach
-    void tearDown() {
-        cleanDatabase();
-    }
-
-    private void cleanDatabase() {
-        try (EntityManager em = JPAUtil.getEntityManager()) {
-            em.getTransaction().begin();
-            em.createQuery("DELETE FROM Annonce").executeUpdate();
-            em.createQuery("DELETE FROM User").executeUpdate();
-            em.createQuery("DELETE FROM Category").executeUpdate();
-            em.getTransaction().commit();
-        }
-    }
-
-    private Annonce createAnnonce(String title, String description, String adress, String mail) {
-        return annonceService.create(new Annonce(title, description, adress, mail), defaultAuthor.getId(), defaultCategory.getId());
+        annonceService = new AnnonceService(repository, persistenceExecutor);
+        stubPersistenceExecution();
     }
 
     @Test
-    void create_shouldPersistAnnonce() {
-        Annonce created = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
+    void constructor_withRepositoryOnly_shouldCreateService() {
+        AnnonceService service = new AnnonceService(repository);
 
-        assertThat(created.getId()).isNotNull();
-        assertThat(created.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
+        assertThat(service).isNotNull();
     }
 
     @Test
-    void createWithRelations_shouldAssignAuthorAndCategory() {
-        User author = userService.create(new User("author2", "author2@test.com", "password"));
-        Category category = categoryService.create(new Category("Services"));
+    void create_shouldDelegateToRepository() {
+        UUID authorId = UUID.randomUUID();
+        Long categoryId = 10L;
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
+        when(repository.saveWithRelations(entityManager, annonce, authorId, categoryId)).thenReturn(annonce);
 
-        Annonce created = annonceService.create(annonce, author.getId(), category.getId());
+        Annonce created = annonceService.create(annonce, authorId, categoryId);
 
-        Optional<Annonce> found = annonceService.findByIdWithRelations(created.getId());
-        assertThat(found).isPresent();
-        assertThat(found.get().getAuthor().getUsername()).isEqualTo("author2");
-        assertThat(found.get().getCategory().getLabel()).isEqualTo("Services");
+        assertThat(created).isSameAs(annonce);
+        verify(repository).saveWithRelations(entityManager, annonce, authorId, categoryId);
     }
 
     @Test
-    void createWithInvalidAuthor_shouldThrowException() {
-        UUID invalidAuthorId = UUID.randomUUID();
+    void update_shouldDelegateToRepository() {
         Annonce annonce = new Annonce("Titre", "Description", "Adresse", "mail@test.com");
-        Long categoryId = defaultCategory.getId();
+        when(repository.update(entityManager, annonce)).thenReturn(annonce);
 
-        assertThatThrownBy(() -> annonceService.create(annonce, invalidAuthorId, categoryId))
-                .isInstanceOf(RepositoryException.class)
-                .hasMessageContaining("Auteur non trouve");
+        Annonce updated = annonceService.update(annonce);
+
+        assertThat(updated).isSameAs(annonce);
+        verify(repository).update(entityManager, annonce);
     }
 
     @Test
-    void publish_shouldChangeStatusToPublished() {
-        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
-        assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.DRAFT);
+    void changeStatus_shouldPublishWhenOwnerAndTransitionAreValid() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce draft = annonceOwnedBy(ownerId, AnnonceStatus.DRAFT);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(draft));
 
-        Annonce published = annonceService.changeStatus(annonce.getId(), "publish");
+        Annonce published = annonceOwnedBy(ownerId, AnnonceStatus.PUBLISHED);
+        when(repository.updateStatus(entityManager, 1L, AnnonceStatus.PUBLISHED)).thenReturn(published);
 
-        assertThat(published.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
+        Annonce result = annonceService.changeStatus(1L, ownerId, "publish");
+
+        assertThat(result.getStatus()).isEqualTo(AnnonceStatus.PUBLISHED);
+        verify(repository).updateStatus(entityManager, 1L, AnnonceStatus.PUBLISHED);
     }
 
     @Test
-    void archive_shouldChangeStatusToArchived() {
-        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
-        annonceService.changeStatus(annonce.getId(), "publish");
+    void changeStatus_shouldRejectUnknownAction() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce draft = annonceOwnedBy(ownerId, AnnonceStatus.DRAFT);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(draft));
 
-        Annonce archived = annonceService.changeStatus(annonce.getId(), "archive");
+        assertThatThrownBy(() -> annonceService.changeStatus(1L, ownerId, "unknown"))
+                .isInstanceOf(InvalidTransitionException.class)
+                .hasMessageContaining("Action inconnue");
 
-        assertThat(archived.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
+        verify(repository, never()).updateStatus(any(), any(), any());
     }
 
     @Test
-    void archiveFromDraft_shouldFail() {
-        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
-        Long annonceId = annonce.getId();
+    void changeStatus_shouldRejectNonOwner() {
+        UUID ownerId = UUID.randomUUID();
+        UUID attackerId = UUID.randomUUID();
+        Annonce draft = annonceOwnedBy(ownerId, AnnonceStatus.DRAFT);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(draft));
 
-        assertThatThrownBy(() -> annonceService.changeStatus(annonceId, "archive"))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("Transition invalide");
+        assertThatThrownBy(() -> annonceService.changeStatus(1L, attackerId, "publish"))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(repository, never()).updateStatus(any(), any(), any());
     }
 
     @Test
-    void delete_shouldRemoveAnnonce() {
-        Annonce annonce = createAnnonce("Titre", "Description", "Adresse", "mail@test.com");
+    void updateFields_shouldRejectPublishedAnnonce() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce published = annonceOwnedBy(ownerId, AnnonceStatus.PUBLISHED);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(published));
 
-        boolean deleted = annonceService.delete(annonce.getId());
+        assertThatThrownBy(() -> annonceService.updateFields(
+                1L, ownerId, "New", "Desc", "Addr", "mail@test.com", null))
+                .isInstanceOf(AnnonceImmutableException.class);
+    }
+
+    @Test
+    void updateFields_shouldUpdateCategoryWhenProvided() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce draft = annonceOwnedBy(ownerId, AnnonceStatus.DRAFT);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(draft));
+
+        Category category = new Category("Auto");
+        when(entityManager.find(Category.class, 5L)).thenReturn(category);
+
+        Annonce result = annonceService.updateFields(
+                1L, ownerId, "Nouveau", "Nouvelle description", "Nouvelle adresse", "new@test.com", 5L);
+
+        assertThat(result.getTitle()).isEqualTo("Nouveau");
+        assertThat(result.getCategory()).isSameAs(category);
+    }
+
+    @Test
+    void updateFields_shouldRejectMissingCategory() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce draft = annonceOwnedBy(ownerId, AnnonceStatus.DRAFT);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(draft));
+        when(entityManager.find(Category.class, 999L)).thenReturn(null);
+
+        assertThatThrownBy(() -> annonceService.updateFields(
+                1L, ownerId, "New", "Desc", "Addr", "mail@test.com", 999L))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("Categorie non trouvee");
+    }
+
+    @Test
+    void delete_shouldRejectAnnonceNotArchived() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce published = annonceOwnedBy(ownerId, AnnonceStatus.PUBLISHED);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(published));
+
+        assertThatThrownBy(() -> annonceService.delete(1L, ownerId))
+                .isInstanceOf(ArchiveRequiredException.class);
+
+        verify(repository, never()).deleteById(any(), any());
+    }
+
+    @Test
+    void delete_shouldDeleteArchivedAnnonceForOwner() {
+        UUID ownerId = UUID.randomUUID();
+        Annonce archived = annonceOwnedBy(ownerId, AnnonceStatus.ARCHIVED);
+        when(repository.findById(entityManager, 1L)).thenReturn(Optional.of(archived));
+        when(repository.deleteById(entityManager, 1L)).thenReturn(true);
+
+        boolean deleted = annonceService.delete(1L, ownerId);
 
         assertThat(deleted).isTrue();
-        assertThat(annonceService.findById(annonce.getId())).isEmpty();
+        verify(repository).deleteById(entityManager, 1L);
     }
 
     @Test
-    void findAllPublished_shouldReturnOnlyPublished() {
-        createAnnonce("Draft", "Desc", "Addr", "mail@test.com");
-        Annonce published = createAnnonce("Published", "Desc", "Addr", "mail2@test.com");
-        annonceService.changeStatus(published.getId(), "publish");
+    void countByKeyword_shouldDelegateToRepository() {
+        when(repository.countByFilters(entityManager, "voiture", null, null)).thenReturn(3L);
 
-        List<Annonce> result = annonceService.findAllPublished(0, 10);
+        long count = annonceService.countByKeyword("voiture");
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getTitle()).isEqualTo("Published");
+        assertThat(count).isEqualTo(3L);
+        verify(repository).countByFilters(entityManager, "voiture", null, null);
     }
 
-    @Test
-    void search_shouldFindByKeyword() {
-        createAnnonce("Voiture a vendre", "Belle voiture", "Paris", "mail@test.com");
-        createAnnonce("Appartement", "Bel appartement", "Lyon", "mail2@test.com");
+    private Annonce annonceOwnedBy(UUID ownerId, AnnonceStatus status) {
+        User owner = new User("owner", "owner@test.com", "pwd");
+        owner.setId(ownerId);
 
-        List<Annonce> results = annonceService.search("voiture", 0, 10);
-
-        assertThat(results).hasSize(1);
+        Annonce annonce = new Annonce("Titre", "Desc", "Addr", "mail@test.com");
+        annonce.setAuthor(owner);
+        annonce.setStatus(status);
+        return annonce;
     }
 
-    @Test
-    void count_shouldReturnTotal() {
-        createAnnonce("Titre 1", "Desc", "Addr", "mail@test.com");
-        createAnnonce("Titre 2", "Desc", "Addr", "mail2@test.com");
-
-        long count = annonceService.count();
-
-        assertThat(count).isEqualTo(2);
+    private void stubPersistenceExecution() {
+        lenient().when(persistenceExecutor.inTransaction(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
+        lenient().when(persistenceExecutor.inReadOnly(any())).thenAnswer(invocation -> {
+            Function<EntityManager, Object> action = invocation.getArgument(0);
+            return action.apply(entityManager);
+        });
     }
 }

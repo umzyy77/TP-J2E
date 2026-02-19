@@ -10,6 +10,8 @@ import org.example.tpj2eannonces.model.AnnonceStatus;
 import org.example.tpj2eannonces.model.Category;
 import org.example.tpj2eannonces.model.User;
 
+import org.example.tpj2eannonces.exception.NotFoundException;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -27,19 +29,19 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
 
     public Annonce saveWithRelations(EntityManager em, Annonce annonce, UUID authorId, Long categoryId) {
         if (authorId == null) {
-            throw new RepositoryException("Auteur obligatoire");
+            throw new NotFoundException("Auteur obligatoire");
         }
         if (categoryId == null) {
-            throw new RepositoryException("Categorie obligatoire");
+            throw new NotFoundException("Categorie obligatoire");
         }
 
         User author = em.find(User.class, authorId);
         if (author == null) {
-            throw new RepositoryException("Auteur non trouve: " + authorId);
+            throw new NotFoundException("Auteur non trouve: " + authorId);
         }
         Category category = em.find(Category.class, categoryId);
         if (category == null) {
-            throw new RepositoryException("Categorie non trouvee: " + categoryId);
+            throw new NotFoundException("Categorie non trouvee: " + categoryId);
         }
 
         annonce.setAuthor(author);
@@ -51,7 +53,7 @@ public class AnnonceRepository extends GenericRepository<Annonce, Long> {
     public Annonce updateStatus(EntityManager em, Long annonceId, AnnonceStatus targetStatus) {
         Annonce annonce = em.find(Annonce.class, annonceId);
         if (annonce == null) {
-            throw new RepositoryException("Annonce non trouvee: " + annonceId);
+            throw new NotFoundException("Annonce non trouvee: " + annonceId);
         }
         annonce.setStatus(targetStatus);
         return annonce;
