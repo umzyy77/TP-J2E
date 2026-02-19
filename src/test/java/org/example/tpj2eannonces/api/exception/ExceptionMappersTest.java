@@ -9,6 +9,7 @@ import org.example.tpj2eannonces.exception.ConflictException;
 import org.example.tpj2eannonces.exception.ForbiddenException;
 import org.example.tpj2eannonces.exception.NotFoundException;
 import org.example.tpj2eannonces.exception.annonce.AnnonceImmutableException;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.StaleStateException;
 import org.junit.jupiter.api.Test;
 
@@ -172,12 +173,22 @@ class ExceptionMappersTest {
         }
     }
 
+    @Test
+    void rollbackExceptionMapper_shouldReturn409WhenHibernateStaleObjectStateException() {
+        RollbackExceptionMapper mapper = new RollbackExceptionMapper();
+        RollbackException rollback = new RollbackException(
+                "Transaction rollback", new StaleObjectStateException("Annonce", 42L));
+
+        try (Response response = mapper.toResponse(rollback)) {
+            assertThat(response.getStatus()).isEqualTo(409);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("CONFLICT");
+        }
+    }
+
     private static class ValidatedPayload {
-        @NotBlank(message = "name required")
-        private final String name;
 
         private ValidatedPayload(String name) {
-            this.name = name;
         }
     }
 }

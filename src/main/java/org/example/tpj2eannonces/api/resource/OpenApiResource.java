@@ -30,13 +30,15 @@ public class OpenApiResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSpec() {
-        try (InputStream input = openApiInputStream()) {
-            if (input == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(ApiErrorDTO.of("NOT_FOUND", "Specification OpenAPI introuvable"))
-                        .build();
-            }
-            JsonNode specification = readSpecification(input);
+        InputStream input = openApiInputStream();
+        if (input == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(ApiErrorDTO.of("NOT_FOUND", "Specification OpenAPI introuvable"))
+                    .build();
+        }
+
+        try (InputStream closableInput = input) {
+            JsonNode specification = readSpecification(closableInput);
             String json = toJson(specification);
             return Response.ok(json, MediaType.APPLICATION_JSON_TYPE).build();
         } catch (IOException e) {

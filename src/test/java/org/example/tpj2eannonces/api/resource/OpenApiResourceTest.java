@@ -1,6 +1,7 @@
 package org.example.tpj2eannonces.api.resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -62,5 +63,40 @@ class OpenApiResourceTest {
             ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
             assertThat(error.error()).isEqualTo("INTERNAL_ERROR");
         }
+    }
+
+    @Test
+    void getSpec_shouldReturn500WhenClosingInputStreamFails() {
+        OpenApiResource resource = new OpenApiResource() {
+            @Override
+            protected InputStream openApiInputStream() {
+                return new ByteArrayInputStream("openapi: 3.0.3".getBytes(StandardCharsets.UTF_8)) {
+                    @Override
+                    public void close() throws IOException {
+                        throw new IOException("close boom");
+                    }
+                };
+            }
+        };
+
+        try (Response response = resource.getSpec()) {
+            assertThat(response.getStatus()).isEqualTo(500);
+            ApiErrorDTO error = (ApiErrorDTO) response.getEntity();
+            assertThat(error.error()).isEqualTo("INTERNAL_ERROR");
+        }
+    }
+
+    @Test
+    void getSpec_shouldPropagateNonIOException() {
+        OpenApiResource resource = new OpenApiResource() {
+            @Override
+            protected String toJson(JsonNode specification) {
+                throw new IllegalStateException("boom");
+            }
+        };
+
+        assertThatThrownBy(resource::getSpec)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("boom");
     }
 }
