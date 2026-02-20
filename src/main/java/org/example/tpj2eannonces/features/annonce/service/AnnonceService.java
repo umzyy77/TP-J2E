@@ -56,7 +56,7 @@ public class AnnonceService {
     public Page<AnnonceResponseDTO> search(String keyword, AnnonceStatus status, Long categoryId,
                                            UUID authorId, LocalDateTime fromDate, LocalDateTime toDate,
                                            Pageable pageable) {
-        Specification<Annonce> spec = (root, query, cb) -> cb.conjunction();
+        Specification<Annonce> spec = Specification.unrestricted();
 
         if (keyword != null && !keyword.isBlank()) {
             spec = spec.and(AnnonceSpecifications.hasKeyword(keyword));
