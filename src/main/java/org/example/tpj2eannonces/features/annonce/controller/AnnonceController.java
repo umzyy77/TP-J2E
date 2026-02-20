@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceResponseDTO;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceStatusDTO;
 import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
@@ -62,7 +64,6 @@ public class AnnonceController {
 
     @PostMapping
     public ResponseEntity<AnnonceResponseDTO> create(@Valid @RequestBody AnnonceFormDTO dto) {
-        // TODO: récupérer l'userId depuis le SecurityContext (exo 4-5)
         UUID currentUserId = getCurrentUserId();
         AnnonceResponseDTO created = annonceService.create(dto, currentUserId);
 
@@ -96,7 +97,7 @@ public class AnnonceController {
     }
 
     private UUID getCurrentUserId() {
-        // Temporaire: sera remplacé par Spring Security (exo 4-5)
-        return null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return UUID.fromString((String) authentication.getPrincipal());
     }
 }
