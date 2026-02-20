@@ -19,6 +19,7 @@ import org.example.tpj2eannonces.shared.exception.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +56,7 @@ public class AnnonceService {
     public Page<AnnonceResponseDTO> search(String keyword, AnnonceStatus status, Long categoryId,
                                            UUID authorId, LocalDateTime fromDate, LocalDateTime toDate,
                                            Pageable pageable) {
-        Specification<Annonce> spec = Specification.where((Specification<Annonce>) null);
+        Specification<Annonce> spec = (root, query, cb) -> cb.conjunction();
 
         if (keyword != null && !keyword.isBlank()) {
             spec = spec.and(AnnonceSpecifications.hasKeyword(keyword));
@@ -81,6 +82,7 @@ public class AnnonceService {
     }
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO create(AnnonceFormDTO dto, UUID authorId) {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new NotFoundException("Utilisateur non trouve: " + authorId));
@@ -96,6 +98,7 @@ public class AnnonceService {
     }
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO update(Long id, AnnonceFormDTO dto, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
                 .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
@@ -119,6 +122,7 @@ public class AnnonceService {
     }
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public void delete(Long id, UUID currentUserId) {
         Annonce annonce = annonceRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
@@ -133,6 +137,7 @@ public class AnnonceService {
     }
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO changeStatus(Long id, String action, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
                 .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
@@ -147,6 +152,11 @@ public class AnnonceService {
                     "Transition invalide: impossible d'appliquer '" + action + "' sur le statut " + annonce.getStatus());
         }
 
+        // Seul un ADMIN peut archiver (action "archive" sur PUBLISHED)
+        if ("archive".equals(action)) {
+            checkAdmin();
+        }
+
         annonce.setStatus(expectedCurrentStatus.getNextStatus());
         Annonce updated = annonceRepository.save(annonce);
         return annonceMapper.toResponseDTO(updated);
@@ -155,6 +165,15 @@ public class AnnonceService {
     private void checkOwnership(Annonce annonce, UUID currentUserId) {
         if (currentUserId == null || !currentUserId.equals(annonce.getOwnerId())) {
             throw new ForbiddenException("Vous n'etes pas l'auteur de cette annonce");
+        }
+    }
+
+    private void checkAdmin() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new ForbiddenException("Seul un administrateur peut archiver une annonce");
         }
     }
 }
