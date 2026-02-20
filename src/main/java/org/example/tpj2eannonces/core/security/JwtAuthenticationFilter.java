@@ -2,6 +2,7 @@ package org.example.tpj2eannonces.core.security;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,9 +21,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final JwtClaimsService jwtClaimsService;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, JwtClaimsService jwtClaimsService) {
         this.jwtService = jwtService;
+        this.jwtClaimsService = jwtClaimsService;
     }
 
     @Override
@@ -36,11 +39,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             if (jwtService.validateToken(token)) {
-                String userId = jwtService.parseToken(token).getSubject();
-                String username = jwtService.extractUsername(token);
-                String role = jwtService.extractRole(token);
+                String userId = jwtClaimsService.extractUserId(token).toString();
+                List<String> tokenAuthorities = jwtClaimsService.extractAuthorities(token);
 
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+                List<SimpleGrantedAuthority> authorities = tokenAuthorities.stream()
+                        .filter(authority -> authority != null && !authority.isBlank())
+                        .map(SimpleGrantedAuthority::new)
+                        .distinct()
+                        .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, null, authorities);

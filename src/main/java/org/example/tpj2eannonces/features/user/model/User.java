@@ -3,17 +3,23 @@ package org.example.tpj2eannonces.features.user.model;
 import java.io.Serial;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.features.annonce.model.Annonce;
+import org.example.tpj2eannonces.features.role.model.Role;
 import org.example.tpj2eannonces.shared.model.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -46,8 +52,9 @@ public class User extends BaseEntity<UUID> {
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column(nullable = false, length = 20)
-    private String role = "ROLE_USER";
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -101,12 +108,43 @@ public class User extends BaseEntity<UUID> {
         this.password = password;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Set<String> resolveRoleNames() {
+        if (role == null) {
+            return Set.of();
+        }
+        String roleName = role.getName();
+        if (roleName == null || roleName.isBlank()) {
+            return Set.of();
+        }
+        return Set.of(roleName);
+    }
+
+    public Set<String> resolveAuthorities() {
+        if (role == null) {
+            return Set.of();
+        }
+
+        Set<String> authorities = new LinkedHashSet<>();
+        String roleName = role.getName();
+        if (roleName != null && !roleName.isBlank()) {
+            authorities.add(roleName);
+        }
+
+        for (String authority : role.getAuthorities()) {
+            if (authority != null && !authority.isBlank()) {
+                authorities.add(authority);
+            }
+        }
+
+        return authorities;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -141,7 +179,7 @@ public class User extends BaseEntity<UUID> {
                 "id=" + id +
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
-                ", role='" + role + '\'' +
+                ", role=" + (role != null ? role.getName() : null) +
                 ", createdAt=" + createdAt +
                 '}';
     }

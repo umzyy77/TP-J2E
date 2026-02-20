@@ -1,16 +1,13 @@
 package org.example.tpj2eannonces.features.annonce.controller;
 
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
+import org.example.tpj2eannonces.core.security.SecurityContextFacade;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceResponseDTO;
+import org.example.tpj2eannonces.features.annonce.dto.AnnonceSearchDTO;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceStatusDTO;
-import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
 import org.example.tpj2eannonces.features.annonce.service.AnnonceService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,8 +20,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -35,25 +32,26 @@ import jakarta.validation.Valid;
 public class AnnonceController {
 
     private final AnnonceService annonceService;
+    private final SecurityContextFacade securityContextFacade;
 
-    public AnnonceController(AnnonceService annonceService) {
+    public AnnonceController(AnnonceService annonceService, SecurityContextFacade securityContextFacade) {
         this.annonceService = annonceService;
+        this.securityContextFacade = securityContextFacade;
     }
 
     @GetMapping
     public ResponseEntity<Page<AnnonceResponseDTO>> list(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) AnnonceStatus status,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) UUID authorId,
-            @RequestParam(required = false) LocalDateTime fromDate,
-            @RequestParam(required = false) LocalDateTime toDate,
+            @ModelAttribute AnnonceSearchDTO filters,
             @PageableDefault(size = 10) Pageable pageable) {
-        boolean hasFilters = q != null || status != null || categoryId != null
-                || authorId != null || fromDate != null || toDate != null;
-
-        if (hasFilters) {
-            return ResponseEntity.ok(annonceService.search(q, status, categoryId, authorId, fromDate, toDate, pageable));
+        if (filters.hasFilters()) {
+            return ResponseEntity.ok(annonceService.search(
+                    filters.q(),
+                    filters.status(),
+                    filters.categoryId(),
+                    filters.authorId(),
+                    filters.fromDate(),
+                    filters.toDate(),
+                    pageable));
         }
         return ResponseEntity.ok(annonceService.findAll(pageable));
     }
@@ -65,7 +63,7 @@ public class AnnonceController {
 
     @PostMapping
     public ResponseEntity<AnnonceResponseDTO> create(@Valid @RequestBody AnnonceFormDTO dto) {
-        UUID currentUserId = getCurrentUserId();
+        UUID currentUserId = securityContextFacade.requireCurrentUserId();
         AnnonceResponseDTO created = annonceService.create(dto, currentUserId);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -79,13 +77,13 @@ public class AnnonceController {
     @PutMapping("/{id}")
     public ResponseEntity<AnnonceResponseDTO> update(@PathVariable Long id,
                                                      @Valid @RequestBody AnnonceFormDTO dto) {
-        UUID currentUserId = getCurrentUserId();
+        UUID currentUserId = securityContextFacade.requireCurrentUserId();
         return ResponseEntity.ok(annonceService.update(id, dto, currentUserId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        UUID currentUserId = getCurrentUserId();
+        UUID currentUserId = securityContextFacade.requireCurrentUserId();
         annonceService.delete(id, currentUserId);
         return ResponseEntity.noContent().build();
     }
@@ -93,13 +91,7 @@ public class AnnonceController {
     @PatchMapping("/{id}")
     public ResponseEntity<AnnonceResponseDTO> changeStatus(@PathVariable Long id,
                                                            @Valid @RequestBody AnnonceStatusDTO dto) {
-        UUID currentUserId = getCurrentUserId();
+        UUID currentUserId = securityContextFacade.requireCurrentUserId();
         return ResponseEntity.ok(annonceService.changeStatus(id, dto.action(), currentUserId));
-    }
-
-    private UUID getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assert authentication != null;
-        return UUID.fromString((String) Objects.requireNonNull(authentication.getPrincipal()));
     }
 }

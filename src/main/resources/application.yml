@@ -2,6 +2,10 @@ spring:
   application:
     name: MasterAnnonce
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
   datasource:
     url: jdbc:postgresql://localhost:5432/MasterAnnonce
     username: postgres
@@ -15,7 +19,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
 server:

@@ -4,8 +4,11 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.example.tpj2eannonces.core.security.SecurityContextFacade;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceResponseDTO;
+import org.example.tpj2eannonces.features.annonce.exception.AnnonceForbiddenException;
+import org.example.tpj2eannonces.features.annonce.exception.AnnonceNotFoundException;
 import org.example.tpj2eannonces.features.annonce.mapper.AnnonceMapper;
 import org.example.tpj2eannonces.features.annonce.model.Annonce;
 import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
@@ -15,8 +18,6 @@ import org.example.tpj2eannonces.features.category.model.Category;
 import org.example.tpj2eannonces.features.category.repository.CategoryRepository;
 import org.example.tpj2eannonces.features.user.model.User;
 import org.example.tpj2eannonces.features.user.repository.UserRepository;
-import org.example.tpj2eannonces.shared.exception.ForbiddenException;
-import org.example.tpj2eannonces.shared.exception.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -29,9 +30,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -56,6 +54,9 @@ class AnnonceServiceTest {
 
     @Mock
     private AnnonceMapper annonceMapper;
+
+    @Mock
+    private SecurityContextFacade securityContextFacade;
 
     @InjectMocks
     private AnnonceService annonceService;
@@ -110,7 +111,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> annonceService.findById(99L))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(AnnonceNotFoundException.class)
                     .hasMessageContaining("99");
         }
     }
@@ -148,6 +149,37 @@ class AnnonceServiceTest {
 
             assertThat(result.getContent()).hasSize(1);
         }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldSearchWithAuthorAndDateFilters() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Annonce> page = new PageImpl<>(List.of(annonce), pageable, 1);
+            when(annonceRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+            when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDTO);
+
+            LocalDateTime fromDate = LocalDateTime.now().minusDays(30);
+            LocalDateTime toDate = LocalDateTime.now();
+
+            Page<AnnonceResponseDTO> result = annonceService.search(
+                    null, null, null, userId, fromDate, toDate, pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldIgnoreBlankKeywordFilter() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Annonce> page = new PageImpl<>(List.of(annonce), pageable, 1);
+            when(annonceRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+            when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDTO);
+
+            Page<AnnonceResponseDTO> result = annonceService.search(
+                    "   ", null, null, null, null, null, pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+        }
     }
 
     @Nested
@@ -174,7 +206,7 @@ class AnnonceServiceTest {
             when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> annonceService.create(formDTO, userId))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(AnnonceNotFoundException.class)
                     .hasMessageContaining("Utilisateur");
         }
 
@@ -185,7 +217,7 @@ class AnnonceServiceTest {
             when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> annonceService.create(formDTO, userId))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(AnnonceNotFoundException.class)
                     .hasMessageContaining("Categorie");
         }
     }
@@ -214,7 +246,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
             assertThatThrownBy(() -> annonceService.update(1L, formDTO, otherUserId))
-                    .isInstanceOf(ForbiddenException.class)
+                    .isInstanceOf(AnnonceForbiddenException.class)
                     .hasMessageContaining("auteur");
         }
 
@@ -225,7 +257,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
             assertThatThrownBy(() -> annonceService.update(1L, formDTO, userId))
-                    .isInstanceOf(ForbiddenException.class)
+                    .isInstanceOf(AnnonceForbiddenException.class)
                     .hasMessageContaining("publiee");
         }
 
@@ -235,7 +267,40 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> annonceService.update(99L, formDTO, userId))
-                    .isInstanceOf(NotFoundException.class);
+                    .isInstanceOf(AnnonceNotFoundException.class);
+        }
+
+        @Test
+        void shouldUpdateCategoryWhenCategoryChanges() {
+            annonce.setStatus(AnnonceStatus.DRAFT);
+            AnnonceFormDTO formDTO = new AnnonceFormDTO("New", "NewDesc", "NewAddr", "n@t.com", 2L);
+
+            Category newCategory = new Category("Emploi");
+            newCategory.setId(2L);
+
+            when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+            when(categoryRepository.findById(2L)).thenReturn(Optional.of(newCategory));
+            when(annonceRepository.save(annonce)).thenReturn(annonce);
+            when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDTO);
+
+            AnnonceResponseDTO result = annonceService.update(1L, formDTO, userId);
+
+            assertThat(result).isEqualTo(responseDTO);
+            assertThat(annonce.getCategory()).isEqualTo(newCategory);
+            verify(categoryRepository).findById(2L);
+        }
+
+        @Test
+        void shouldThrowNotFoundWhenNewCategoryDoesNotExistOnUpdate() {
+            annonce.setStatus(AnnonceStatus.DRAFT);
+            AnnonceFormDTO formDTO = new AnnonceFormDTO("New", "NewDesc", "NewAddr", "n@t.com", 2L);
+
+            when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+            when(categoryRepository.findById(2L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> annonceService.update(1L, formDTO, userId))
+                    .isInstanceOf(AnnonceNotFoundException.class)
+                    .hasMessageContaining("Categorie");
         }
     }
 
@@ -258,7 +323,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
             assertThatThrownBy(() -> annonceService.delete(1L, otherUserId))
-                    .isInstanceOf(ForbiddenException.class);
+                    .isInstanceOf(AnnonceForbiddenException.class);
         }
 
         @Test
@@ -267,7 +332,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
             assertThatThrownBy(() -> annonceService.delete(1L, userId))
-                    .isInstanceOf(ForbiddenException.class)
+                    .isInstanceOf(AnnonceForbiddenException.class)
                     .hasMessageContaining("archivee");
         }
 
@@ -276,20 +341,21 @@ class AnnonceServiceTest {
             when(annonceRepository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> annonceService.delete(99L, userId))
-                    .isInstanceOf(NotFoundException.class);
+                    .isInstanceOf(AnnonceNotFoundException.class);
+        }
+
+        @Test
+        void shouldThrowForbiddenWhenCurrentUserIdIsNull() {
+            annonce.setStatus(AnnonceStatus.ARCHIVED);
+            when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
+
+            assertThatThrownBy(() -> annonceService.delete(1L, null))
+                    .isInstanceOf(AnnonceForbiddenException.class);
         }
     }
 
     @Nested
     class ChangeStatus {
-
-        @BeforeEach
-        void setUpSecurityContext() {
-            SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(
-                            userId.toString(), null,
-                            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-        }
 
         @Test
         void shouldPublishDraftAnnonce() {
@@ -310,6 +376,7 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
             when(annonceRepository.save(annonce)).thenReturn(annonce);
             when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDTO);
+            when(securityContextFacade.hasAnyAuthority("ANNONCE_ARCHIVE", "ROLE_ADMIN")).thenReturn(true);
 
             annonceService.changeStatus(1L, "archive", userId);
 
@@ -318,16 +385,12 @@ class AnnonceServiceTest {
 
         @Test
         void shouldThrowForbiddenWhenNonAdminTriesToArchive() {
-            SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(
-                            userId.toString(), null,
-                            List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-
             annonce.setStatus(AnnonceStatus.PUBLISHED);
             when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+            when(securityContextFacade.hasAnyAuthority("ANNONCE_ARCHIVE", "ROLE_ADMIN")).thenReturn(false);
 
             assertThatThrownBy(() -> annonceService.changeStatus(1L, "archive", userId))
-                    .isInstanceOf(ForbiddenException.class)
+                    .isInstanceOf(AnnonceForbiddenException.class)
                     .hasMessageContaining("administrateur");
         }
 
@@ -356,7 +419,40 @@ class AnnonceServiceTest {
             when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
             assertThatThrownBy(() -> annonceService.changeStatus(1L, "publish", otherUserId))
-                    .isInstanceOf(ForbiddenException.class);
+                    .isInstanceOf(AnnonceForbiddenException.class);
+        }
+
+        @Test
+        void shouldThrowNotFoundWhenAnnonceDoesNotExist() {
+            when(annonceRepository.findWithRelationsById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> annonceService.changeStatus(99L, "publish", userId))
+                    .isInstanceOf(AnnonceNotFoundException.class);
+        }
+
+        @Test
+        void shouldThrowForbiddenWhenArchiveWithoutAuthentication() {
+            annonce.setStatus(AnnonceStatus.PUBLISHED);
+            when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+            when(securityContextFacade.hasAnyAuthority("ANNONCE_ARCHIVE", "ROLE_ADMIN")).thenReturn(false);
+
+            assertThatThrownBy(() -> annonceService.changeStatus(1L, "archive", userId))
+                    .isInstanceOf(AnnonceForbiddenException.class)
+                    .hasMessageContaining("administrateur");
+        }
+
+        @Test
+        void shouldArchivePublishedAnnonceWhenUserHasArchiveAuthority() {
+            annonce.setStatus(AnnonceStatus.PUBLISHED);
+            when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+            when(annonceRepository.save(annonce)).thenReturn(annonce);
+            when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDTO);
+            when(securityContextFacade.hasAnyAuthority("ANNONCE_ARCHIVE", "ROLE_ADMIN")).thenReturn(true);
+
+            AnnonceResponseDTO result = annonceService.changeStatus(1L, "archive", userId);
+
+            assertThat(result).isEqualTo(responseDTO);
+            assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
         }
     }
 }

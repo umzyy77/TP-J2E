@@ -1,8 +1,8 @@
-package org.example.tpj2eannonces.shared.exception;
+package org.example.tpj2eannonces.core.web.exception;
 
 import java.util.List;
 
-import org.example.tpj2eannonces.shared.dto.ApiErrorDTO;
+import org.example.tpj2eannonces.core.web.dto.ApiErrorDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,22 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ApiErrorDTO> handleNotFound(NotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiErrorDTO.of("NOT_FOUND", ex.getMessage()));
-    }
-
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiErrorDTO> handleForbidden(ForbiddenException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiErrorDTO.of("FORBIDDEN", ex.getMessage()));
-    }
-
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiErrorDTO> handleConflict(ConflictException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiErrorDTO.of("CONFLICT", ex.getMessage()));
+    @ExceptionHandler(ApiBusinessException.class)
+    public ResponseEntity<ApiErrorDTO> handleBusinessException(ApiBusinessException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(ApiErrorDTO.of(ex.getErrorCode(), ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

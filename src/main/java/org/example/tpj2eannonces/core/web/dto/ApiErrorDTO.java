@@ -1,4 +1,4 @@
-package org.example.tpj2eannonces.shared.dto;
+package org.example.tpj2eannonces.core.web.dto;
 
 import java.util.List;
 

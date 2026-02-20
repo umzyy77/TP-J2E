@@ -1,16 +1,27 @@
 -- Donnees de test pour MasterAnnonce
 
+-- Roles
+INSERT INTO roles (id, name) VALUES
+    (1, 'ROLE_ADMIN'),
+    (2, 'ROLE_USER');
+
+SELECT setval(pg_get_serial_sequence('roles', 'id'), (SELECT MAX(id) FROM roles), true);
+
+-- Autorites par role
+INSERT INTO role_authorities (role_id, authority) VALUES
+    (1, 'ANNONCE_ARCHIVE');
+
 -- Utilisateurs avec mots de passe haches BCrypt
 -- Hash genere avec BCrypt, 12 rounds (password: password123)
-INSERT INTO users (id, username, email, password, created_at) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'admin', 'admin@masterannonce.fr', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('22222222-2222-2222-2222-222222222222', 'jean', 'jean@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('33333333-3333-3333-3333-333333333333', 'marie', 'marie@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('44444444-4444-4444-4444-444444444444', 'lucas', 'lucas@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('55555555-5555-5555-5555-555555555555', 'sophie', 'sophie@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('66666666-6666-6666-6666-666666666666', 'karim', 'karim@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('77777777-7777-7777-7777-777777777777', 'claire', 'claire@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW()),
-    ('88888888-8888-8888-8888-888888888888', 'mehdi', 'mehdi@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', NOW());
+INSERT INTO users (id, username, email, password, role_id, created_at) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'admin', 'admin@masterannonce.fr', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 1, NOW()),
+    ('22222222-2222-2222-2222-222222222222', 'jean', 'jean@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('33333333-3333-3333-3333-333333333333', 'marie', 'marie@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('44444444-4444-4444-4444-444444444444', 'lucas', 'lucas@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('55555555-5555-5555-5555-555555555555', 'sophie', 'sophie@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('66666666-6666-6666-6666-666666666666', 'karim', 'karim@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('77777777-7777-7777-7777-777777777777', 'claire', 'claire@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW()),
+    ('88888888-8888-8888-8888-888888888888', 'mehdi', 'mehdi@example.com', '$2a$12$1CW7XKT9Hn/4yDlV4qVCmOayeRFfzlgeakfBvLZUYelmFc18Pi.GS', 2, NOW());
 
 -- Categories
 INSERT INTO category (id, label) VALUES

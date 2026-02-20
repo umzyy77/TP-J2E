@@ -3,8 +3,11 @@ package org.example.tpj2eannonces.features.annonce.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.example.tpj2eannonces.core.security.SecurityContextFacade;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceResponseDTO;
+import org.example.tpj2eannonces.features.annonce.exception.AnnonceForbiddenException;
+import org.example.tpj2eannonces.features.annonce.exception.AnnonceNotFoundException;
 import org.example.tpj2eannonces.features.annonce.mapper.AnnonceMapper;
 import org.example.tpj2eannonces.features.annonce.model.Annonce;
 import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
@@ -14,8 +17,6 @@ import org.example.tpj2eannonces.features.category.model.Category;
 import org.example.tpj2eannonces.features.category.repository.CategoryRepository;
 import org.example.tpj2eannonces.features.user.model.User;
 import org.example.tpj2eannonces.features.user.repository.UserRepository;
-import org.example.tpj2eannonces.shared.exception.ForbiddenException;
-import org.example.tpj2eannonces.shared.exception.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,24 +28,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AnnonceService {
 
+    private static final String ARCHIVE_AUTHORITY = "ANNONCE_ARCHIVE";
+    private static final String LEGACY_ADMIN_ROLE = "ROLE_ADMIN";
+
     private final AnnonceRepository annonceRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final AnnonceMapper annonceMapper;
+    private final SecurityContextFacade securityContextFacade;
 
     public AnnonceService(AnnonceRepository annonceRepository,
                           UserRepository userRepository,
                           CategoryRepository categoryRepository,
-                          AnnonceMapper annonceMapper) {
+                          AnnonceMapper annonceMapper,
+                          SecurityContextFacade securityContextFacade) {
         this.annonceRepository = annonceRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.annonceMapper = annonceMapper;
+        this.securityContextFacade = securityContextFacade;
     }
 
     public AnnonceResponseDTO findById(Long id) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
         return annonceMapper.toResponseDTO(annonce);
     }
 
@@ -56,26 +63,13 @@ public class AnnonceService {
     public Page<AnnonceResponseDTO> search(String keyword, AnnonceStatus status, Long categoryId,
                                            UUID authorId, LocalDateTime fromDate, LocalDateTime toDate,
                                            Pageable pageable) {
-        Specification<Annonce> spec = Specification.unrestricted();
-
-        if (keyword != null && !keyword.isBlank()) {
-            spec = spec.and(AnnonceSpecifications.hasKeyword(keyword));
-        }
-        if (status != null) {
-            spec = spec.and(AnnonceSpecifications.hasStatus(status));
-        }
-        if (categoryId != null) {
-            spec = spec.and(AnnonceSpecifications.hasCategoryId(categoryId));
-        }
-        if (authorId != null) {
-            spec = spec.and(AnnonceSpecifications.hasAuthorId(authorId));
-        }
-        if (fromDate != null) {
-            spec = spec.and(AnnonceSpecifications.createdAfter(fromDate));
-        }
-        if (toDate != null) {
-            spec = spec.and(AnnonceSpecifications.createdBefore(toDate));
-        }
+        Specification<Annonce> spec = Specification.<Annonce>unrestricted()
+                .and(AnnonceSpecifications.hasKeyword(keyword))
+                .and(AnnonceSpecifications.hasStatus(status))
+                .and(AnnonceSpecifications.hasCategoryId(categoryId))
+                .and(AnnonceSpecifications.hasAuthorId(authorId))
+                .and(AnnonceSpecifications.createdAfter(fromDate))
+                .and(AnnonceSpecifications.createdBefore(toDate));
 
         return annonceRepository.findAll(spec, pageable)
                 .map(annonceMapper::toResponseDTO);
@@ -85,9 +79,9 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO create(AnnonceFormDTO dto, UUID authorId) {
         User author = userRepository.findById(authorId)
-                .orElseThrow(() -> new NotFoundException("Utilisateur non trouve: " + authorId));
+                .orElseThrow(() -> new AnnonceNotFoundException("Utilisateur non trouve: " + authorId));
         Category category = categoryRepository.findById(dto.categoryId())
-                .orElseThrow(() -> new NotFoundException("Categorie non trouvee: " + dto.categoryId()));
+                .orElseThrow(() -> new AnnonceNotFoundException("Categorie non trouvee: " + dto.categoryId()));
 
         Annonce annonce = annonceMapper.toEntity(dto);
         annonce.setAuthor(author);
@@ -101,19 +95,19 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO update(Long id, AnnonceFormDTO dto, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
 
         checkOwnership(annonce, currentUserId);
 
         if (annonce.getStatus() == AnnonceStatus.PUBLISHED) {
-            throw new ForbiddenException("Une annonce publiee ne peut pas etre modifiee");
+            throw new AnnonceForbiddenException("Une annonce publiee ne peut pas etre modifiee");
         }
 
         annonceMapper.updateEntityFromDTO(dto, annonce);
 
         if (!annonce.getCategory().getId().equals(dto.categoryId())) {
             Category category = categoryRepository.findById(dto.categoryId())
-                    .orElseThrow(() -> new NotFoundException("Categorie non trouvee: " + dto.categoryId()));
+                    .orElseThrow(() -> new AnnonceNotFoundException("Categorie non trouvee: " + dto.categoryId()));
             annonce.setCategory(category);
         }
 
@@ -125,12 +119,12 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public void delete(Long id, UUID currentUserId) {
         Annonce annonce = annonceRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
 
         checkOwnership(annonce, currentUserId);
 
         if (annonce.getStatus() != AnnonceStatus.ARCHIVED) {
-            throw new ForbiddenException("Seule une annonce archivee peut etre supprimee");
+            throw new AnnonceForbiddenException("Seule une annonce archivee peut etre supprimee");
         }
 
         annonceRepository.delete(annonce);
@@ -140,7 +134,7 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO changeStatus(Long id, String action, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new NotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
 
         checkOwnership(annonce, currentUserId);
 
@@ -152,9 +146,9 @@ public class AnnonceService {
                     "Transition invalide: impossible d'appliquer '" + action + "' sur le statut " + annonce.getStatus());
         }
 
-        // Seul un ADMIN peut archiver (action "archive" sur PUBLISHED)
+        // Archive autorisee uniquement avec l'autorite metier adequate.
         if ("archive".equals(action)) {
-            checkAdmin();
+            checkArchivePermission();
         }
 
         annonce.setStatus(expectedCurrentStatus.getNextStatus());
@@ -164,16 +158,15 @@ public class AnnonceService {
 
     private void checkOwnership(Annonce annonce, UUID currentUserId) {
         if (currentUserId == null || !currentUserId.equals(annonce.getOwnerId())) {
-            throw new ForbiddenException("Vous n'etes pas l'auteur de cette annonce");
+            throw new AnnonceForbiddenException("Vous n'etes pas l'auteur de cette annonce");
         }
     }
 
-    private void checkAdmin() {
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            throw new ForbiddenException("Seul un administrateur peut archiver une annonce");
+    private void checkArchivePermission() {
+        boolean canArchive = securityContextFacade.hasAnyAuthority(ARCHIVE_AUTHORITY, LEGACY_ADMIN_ROLE);
+
+        if (!canArchive) {
+            throw new AnnonceForbiddenException("Seul un administrateur peut archiver une annonce");
         }
     }
 }
