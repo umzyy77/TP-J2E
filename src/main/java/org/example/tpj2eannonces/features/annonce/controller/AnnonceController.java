@@ -2,6 +2,7 @@ package org.example.tpj2eannonces.features.annonce.controller;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
@@ -98,6 +99,7 @@ public class AnnonceController {
 
     private UUID getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return UUID.fromString((String) authentication.getPrincipal());
+        assert authentication != null;
+        return UUID.fromString((String) Objects.requireNonNull(authentication.getPrincipal()));
     }
 }
