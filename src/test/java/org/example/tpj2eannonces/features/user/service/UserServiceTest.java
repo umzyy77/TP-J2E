@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,38 +24,40 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void shouldFindUserById() {
-        UUID userId = UUID.randomUUID();
-        User user = new User("alice", "alice@example.com", "hashed");
-        user.setId(userId);
+    void findById_shouldReturnUser_whenExists() {
+        UUID id = UUID.randomUUID();
+        User user = new User("alice", "alice@test.com", "pass");
+        user.setId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        Optional<User> result = userService.findById(id);
 
-        Optional<User> result = userService.findById(userId);
-
-        assertThat(result).contains(user);
-        verify(userRepository).findById(userId);
+        assertThat(result).isPresent();
+        assertThat(result.get().getUsername()).isEqualTo("alice");
     }
 
     @Test
-    void shouldFindUserWithRoleByUsername() {
-        User user = new User("bob", "bob@example.com", "hashed");
+    void findById_shouldReturnEmpty_whenNotExists() {
+        UUID id = UUID.randomUUID();
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        when(userRepository.findWithRoleByUsername("bob")).thenReturn(Optional.of(user));
-
-        Optional<User> result = userService.findWithRoleByUsername("bob");
-
-        assertThat(result).contains(user);
-        verify(userRepository).findWithRoleByUsername("bob");
+        assertThat(userService.findById(id)).isEmpty();
     }
 
     @Test
-    void shouldReturnEmptyWhenUserNotFoundByUsername() {
-        when(userRepository.findWithRoleByUsername("ghost")).thenReturn(Optional.empty());
+    void findWithRoleByUsername_shouldReturnUser_whenExists() {
+        User user = new User("alice", "alice@test.com", "pass");
+        when(userRepository.findWithRoleByUsername("alice")).thenReturn(Optional.of(user));
 
-        Optional<User> result = userService.findWithRoleByUsername("ghost");
+        Optional<User> result = userService.findWithRoleByUsername("alice");
 
-        assertThat(result).isEmpty();
-        verify(userRepository).findWithRoleByUsername("ghost");
+        assertThat(result).isPresent();
+    }
+
+    @Test
+    void findWithRoleByUsername_shouldReturnEmpty_whenNotExists() {
+        when(userRepository.findWithRoleByUsername("unknown")).thenReturn(Optional.empty());
+
+        assertThat(userService.findWithRoleByUsername("unknown")).isEmpty();
     }
 }

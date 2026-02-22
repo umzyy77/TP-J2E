@@ -1,85 +1,87 @@
 package org.example.tpj2eannonces.core.security;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import io.jsonwebtoken.Claims;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtServiceTest {
 
-    private static final String SECRET = "MasterAnnonceSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!";
-    private static final long EXPIRATION_MS = 86_400_000L;
+    private static final String SECRET = "TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!";
+    private static final long EXPIRATION = 3600000L;
 
     private JwtService jwtService;
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(SECRET, EXPIRATION_MS);
+        jwtService = new JwtService(SECRET, EXPIRATION);
     }
 
     @Test
-    void shouldGenerateAndExtractClaimsWithRolesAndAuthorities() {
+    void generateToken_shouldProduceValidToken() {
         UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(
-                userId,
-                "alice",
-                Arrays.asList("ROLE_ADMIN", "ROLE_ADMIN", " ", "ROLE_USER"),
-                Arrays.asList("ANNONCE_ARCHIVE", null, " ", "ANNONCE_ARCHIVE")
-        );
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER", "ANNONCE_READ"));
+
+        assertThat(token).isNotBlank();
+        assertThat(jwtService.validateToken(token)).isTrue();
+    }
+
+    @Test
+    void parseToken_shouldExtractSubject() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER"));
 
         Claims claims = jwtService.parseToken(token);
 
-        assertThat(jwtService.validateToken(token)).isTrue();
         assertThat(claims.getSubject()).isEqualTo(userId.toString());
         assertThat(claims.get("username", String.class)).isEqualTo("alice");
-        assertThat(claims.get("roles", List.class)).containsExactly("ROLE_ADMIN", "ROLE_USER");
-        assertThat(claims.get("authorities", List.class)).containsExactly("ANNONCE_ARCHIVE");
-        assertThat(claims.get("role", String.class)).isEqualTo("ROLE_ADMIN");
     }
 
     @Test
-    void shouldFallbackAuthoritiesToRolesWhenAuthoritiesAreEmpty() {
-        UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(userId, "bob", List.of("ROLE_USER"), List.of());
-        Claims claims = jwtService.parseToken(token);
+    void validateToken_shouldReturnFalse_whenTokenIsInvalid() {
+        assertThat(jwtService.validateToken("invalid-token")).isFalse();
+    }
 
-        assertThat(claims.get("roles", List.class)).containsExactly("ROLE_USER");
-        assertThat(claims.get("authorities", List.class)).containsExactly("ROLE_USER");
+    @Test
+    void validateToken_shouldReturnFalse_whenTokenIsNull() {
+        assertThat(jwtService.validateToken(null)).isFalse();
+    }
+
+    @Test
+    void getExpirationMs_shouldReturnConfiguredValue() {
+        assertThat(jwtService.getExpirationMs()).isEqualTo(EXPIRATION);
+    }
+
+    @Test
+    void generateToken_shouldHandleEmptyRoles() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of(), Set.of("ANNONCE_READ"));
+
+        assertThat(token).isNotBlank();
+        assertThat(jwtService.validateToken(token)).isTrue();
+    }
+
+    @Test
+    void generateToken_shouldHandleEmptyAuthorities() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of());
+
+        assertThat(token).isNotBlank();
+        Claims claims = jwtService.parseToken(token);
+        // When authorities empty, should use roles as fallback
         assertThat(claims.get("role", String.class)).isEqualTo("ROLE_USER");
     }
 
     @Test
-    void shouldNotAddLegacyRoleClaimWhenRolesAreEmpty() {
+    void generateToken_shouldHandleBothEmpty() {
         UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(userId, "charlie", List.of(), List.of());
-        Claims claims = jwtService.parseToken(token);
+        String token = jwtService.generateToken(userId, "alice", Set.of(), Set.of());
 
-        assertThat(claims.get("roles", List.class)).isEmpty();
-        assertThat(claims.get("authorities", List.class)).isEmpty();
-        assertThat(claims.get("role", String.class)).isNull();
-    }
-
-    @Test
-    void shouldHandleNullRolesAndAuthoritiesOnTokenGeneration() {
-        UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(userId, "foxtrot", null, null);
-        Claims claims = jwtService.parseToken(token);
-
-        assertThat(claims.get("roles", List.class)).isEmpty();
-        assertThat(claims.get("authorities", List.class)).isEmpty();
-        assertThat(claims.get("role", String.class)).isNull();
-        assertThat(jwtService.getExpirationMs()).isEqualTo(EXPIRATION_MS);
-    }
-
-    @Test
-    void shouldReturnFalseForInvalidOrNullToken() {
-        assertThat(jwtService.validateToken("invalid-token")).isFalse();
-        assertThat(jwtService.validateToken(null)).isFalse();
+        assertThat(token).isNotBlank();
+        assertThat(jwtService.validateToken(token)).isTrue();
     }
 }

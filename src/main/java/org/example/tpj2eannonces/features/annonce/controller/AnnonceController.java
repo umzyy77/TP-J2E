@@ -92,6 +92,9 @@ public class AnnonceController {
     public ResponseEntity<AnnonceResponseDTO> changeStatus(@PathVariable Long id,
                                                            @Valid @RequestBody AnnonceStatusDTO dto) {
         UUID currentUserId = securityContextFacade.requireCurrentUserId();
+        if ("archive".equals(dto.action())) {
+            return ResponseEntity.ok(annonceService.archive(id, currentUserId));
+        }
         return ResponseEntity.ok(annonceService.changeStatus(id, dto.action(), currentUserId));
     }
 }

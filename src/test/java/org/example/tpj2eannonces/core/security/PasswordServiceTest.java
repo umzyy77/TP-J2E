@@ -1,39 +1,57 @@
 package org.example.tpj2eannonces.core.security;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class PasswordServiceTest {
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
     private PasswordService passwordService;
 
-    @BeforeEach
-    void setUp() {
-        passwordService = new PasswordService(new BCryptPasswordEncoder());
+    @Test
+    void matches_shouldReturnTrue_whenPasswordMatches() {
+        when(passwordEncoder.matches("raw", "encoded")).thenReturn(true);
+
+        assertThat(passwordService.matches("raw", "encoded")).isTrue();
     }
 
     @Test
-    void shouldEncodeAndMatchPassword() {
-        String encoded = passwordService.encode("secret");
+    void matches_shouldReturnFalse_whenPasswordDoesNotMatch() {
+        when(passwordEncoder.matches("raw", "encoded")).thenReturn(false);
 
-        assertThat(encoded).isNotBlank();
-        assertThat(passwordService.matches("secret", encoded)).isTrue();
+        assertThat(passwordService.matches("raw", "encoded")).isFalse();
     }
 
     @Test
-    void shouldNotMatchWhenPasswordIsDifferent() {
-        String encoded = passwordService.encode("secret");
-
-        assertThat(passwordService.matches("other", encoded)).isFalse();
+    void matches_shouldReturnFalse_whenRawPasswordIsNull() {
+        assertThat(passwordService.matches(null, "encoded")).isFalse();
     }
 
     @Test
-    void shouldReturnFalseWhenInputIsInvalid() {
-        assertThat(passwordService.matches(null, "hash")).isFalse();
-        assertThat(passwordService.matches("secret", null)).isFalse();
-        assertThat(passwordService.matches("secret", "   ")).isFalse();
+    void matches_shouldReturnFalse_whenEncodedPasswordIsNull() {
+        assertThat(passwordService.matches("raw", null)).isFalse();
+    }
+
+    @Test
+    void matches_shouldReturnFalse_whenEncodedPasswordIsBlank() {
+        assertThat(passwordService.matches("raw", "  ")).isFalse();
+    }
+
+    @Test
+    void encode_shouldDelegateToEncoder() {
+        when(passwordEncoder.encode("raw")).thenReturn("encoded");
+
+        assertThat(passwordService.encode("raw")).isEqualTo("encoded");
     }
 }

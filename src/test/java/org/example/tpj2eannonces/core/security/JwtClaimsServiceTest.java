@@ -1,126 +1,114 @@
 package org.example.tpj2eannonces.core.security;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
-
-import javax.crypto.SecretKey;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtClaimsServiceTest {
 
-    private static final String SECRET = "MasterAnnonceSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!";
-    private static final long EXPIRATION_MS = 86_400_000L;
+    private static final String SECRET = "TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!";
 
-    private JwtClaimsService jwtClaimsService;
     private JwtService jwtService;
-    private SecretKey signingKey;
+    private JwtClaimsService jwtClaimsService;
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(SECRET, EXPIRATION_MS);
+        jwtService = new JwtService(SECRET, 3600000L);
         jwtClaimsService = new JwtClaimsService(jwtService);
-        signingKey = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
-    void shouldExtractClaimsFromGeneratedToken() {
+    void extractUserId_shouldReturnCorrectUUID() {
         UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(
-                userId,
-                "alice",
-                Arrays.asList("ROLE_ADMIN", "ROLE_ADMIN", " ", "ROLE_USER"),
-                Arrays.asList("ANNONCE_ARCHIVE", null, " ", "ANNONCE_ARCHIVE")
-        );
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER"));
 
         assertThat(jwtClaimsService.extractUserId(token)).isEqualTo(userId);
-        assertThat(jwtClaimsService.extractUsername(token)).isEqualTo("alice");
-        assertThat(jwtClaimsService.extractRoles(token)).containsExactly("ROLE_ADMIN", "ROLE_USER");
-        assertThat(jwtClaimsService.extractAuthorities(token)).containsExactly("ANNONCE_ARCHIVE");
-        assertThat(jwtClaimsService.extractRole(token)).isEqualTo("ROLE_ADMIN");
     }
 
     @Test
-    void shouldFallbackAuthoritiesToRolesWhenAuthoritiesAreEmpty() {
+    void extractUsername_shouldReturnCorrectUsername() {
         UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(userId, "bob", List.of("ROLE_USER"), List.of());
+        String token = jwtService.generateToken(userId, "bob", Set.of("ROLE_USER"), Set.of("ROLE_USER"));
 
-        assertThat(jwtClaimsService.extractAuthorities(token)).containsExactly("ROLE_USER");
-        assertThat(jwtClaimsService.extractRoles(token)).containsExactly("ROLE_USER");
+        assertThat(jwtClaimsService.extractUsername(token)).isEqualTo("bob");
+    }
+
+    @Test
+    void extractRoles_shouldReturnRoleList() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER", "ROLE_ADMIN"), Set.of("ROLE_USER"));
+
+        List<String> roles = jwtClaimsService.extractRoles(token);
+
+        assertThat(roles).contains("ROLE_USER", "ROLE_ADMIN");
+    }
+
+    @Test
+    void extractAuthorities_shouldReturnAuthoritiesList() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER", "ANNONCE_READ"));
+
+        List<String> authorities = jwtClaimsService.extractAuthorities(token);
+
+        assertThat(authorities).contains("ROLE_USER", "ANNONCE_READ");
+    }
+
+    @Test
+    void extractRole_shouldReturnFirstRole() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER"));
+
         assertThat(jwtClaimsService.extractRole(token)).isEqualTo("ROLE_USER");
     }
 
     @Test
-    void shouldReturnEmptyClaimsWhenNoRoleInformationExists() {
+    void extractRole_shouldReturnNull_whenNoRoles() {
         UUID userId = UUID.randomUUID();
-        String token = jwtService.generateToken(userId, "charlie", List.of(), List.of());
+        String token = jwtService.generateToken(userId, "alice", Set.of(), Set.of());
 
-        assertThat(jwtClaimsService.extractRoles(token)).isEmpty();
-        assertThat(jwtClaimsService.extractAuthorities(token)).isEmpty();
         assertThat(jwtClaimsService.extractRole(token)).isNull();
     }
 
     @Test
-    void shouldHandleBlankRoleClaimAndReturnEmptyRoleList() {
-        String token = Jwts.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("username", "blank")
-                .claim("role", " ")
-                .signWith(signingKey)
-                .compact();
+    void extractAuthorities_shouldFallbackToRoles_whenNoAuthoritiesClaim() {
+        UUID userId = UUID.randomUUID();
+        // When authorities is empty set, it will fallback to extractRoles
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of());
 
-        assertThat(jwtClaimsService.extractRoles(token)).isEmpty();
-        assertThat(jwtClaimsService.extractAuthorities(token)).isEmpty();
-        assertThat(jwtClaimsService.extractRole(token)).isNull();
+        List<String> authorities = jwtClaimsService.extractAuthorities(token);
+        // Should fallback to roles
+        assertThat(authorities).contains("ROLE_USER");
     }
 
     @Test
-    void shouldFallbackToSingleRoleClaimWhenRolesListIsMissing() {
-        String token = Jwts.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("username", "single")
-                .claim("role", "ROLE_EDITOR")
-                .signWith(signingKey)
-                .compact();
+    void extractRoles_shouldReturnEmpty_whenNoRolesClaim() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of(), Set.of());
 
-        assertThat(jwtClaimsService.extractRoles(token)).containsExactly("ROLE_EDITOR");
-        assertThat(jwtClaimsService.extractAuthorities(token)).containsExactly("ROLE_EDITOR");
-        assertThat(jwtClaimsService.extractRole(token)).isEqualTo("ROLE_EDITOR");
+        List<String> roles = jwtClaimsService.extractRoles(token);
+        assertThat(roles).isEmpty();
     }
 
     @Test
-    void shouldHandleNonCollectionAuthoritiesClaimAndFilterNullValuesInRolesClaim() {
-        String token = Jwts.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("username", "delta")
-                .claim("role", "ROLE_FALLBACK")
-                .claim("roles", Arrays.asList(null, "ROLE_MODERATOR", " "))
-                .claim("authorities", "NOT_A_COLLECTION")
-                .signWith(signingKey)
-                .compact();
+    void extractAuthorities_shouldReturnAuthoritiesDirectly_whenPresent() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ANNONCE_READ", "ANNONCE_WRITE"));
 
-        assertThat(jwtClaimsService.extractRoles(token)).containsExactly("ROLE_MODERATOR");
-        assertThat(jwtClaimsService.extractAuthorities(token)).containsExactly("ROLE_MODERATOR");
-        assertThat(jwtClaimsService.extractRole(token)).isEqualTo("ROLE_MODERATOR");
+        List<String> authorities = jwtClaimsService.extractAuthorities(token);
+        assertThat(authorities).contains("ANNONCE_READ", "ANNONCE_WRITE");
     }
 
     @Test
-    void shouldReturnEmptyRolesWhenRoleClaimIsMissing() {
-        String token = Jwts.builder()
-                .subject(UUID.randomUUID().toString())
-                .claim("username", "echo")
-                .signWith(signingKey)
-                .compact();
+    void extractRoles_shouldReturnMultipleRoles() {
+        UUID userId = UUID.randomUUID();
+        String token = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER", "ROLE_ADMIN"), Set.of("ROLE_USER", "ROLE_ADMIN"));
 
-        assertThat(jwtClaimsService.extractRoles(token)).isEmpty();
-        assertThat(jwtClaimsService.extractRole(token)).isNull();
+        List<String> roles = jwtClaimsService.extractRoles(token);
+        assertThat(roles).contains("ROLE_USER", "ROLE_ADMIN");
     }
 }

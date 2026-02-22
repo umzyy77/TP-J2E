@@ -31,7 +31,6 @@ public class AnnonceMetaController {
     private static List<String> buildSortableFields() {
         return Arrays.stream(Annonce.class.getDeclaredFields())
                 .filter(f -> !f.getName().equals("serialVersionUID"))
-                .filter(f -> !java.util.Collection.class.isAssignableFrom(f.getType()))
                 .map(Field::getName)
                 .toList();
     }

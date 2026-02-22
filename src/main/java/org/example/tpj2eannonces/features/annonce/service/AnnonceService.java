@@ -3,7 +3,6 @@ package org.example.tpj2eannonces.features.annonce.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import org.example.tpj2eannonces.core.security.SecurityContextFacade;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceFormDTO;
 import org.example.tpj2eannonces.features.annonce.dto.AnnonceResponseDTO;
 import org.example.tpj2eannonces.features.annonce.exception.AnnonceForbiddenException;
@@ -28,25 +27,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AnnonceService {
 
-    private static final String ARCHIVE_AUTHORITY = "ANNONCE_ARCHIVE";
-    private static final String LEGACY_ADMIN_ROLE = "ROLE_ADMIN";
-
     private final AnnonceRepository annonceRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final AnnonceMapper annonceMapper;
-    private final SecurityContextFacade securityContextFacade;
 
     public AnnonceService(AnnonceRepository annonceRepository,
                           UserRepository userRepository,
                           CategoryRepository categoryRepository,
-                          AnnonceMapper annonceMapper,
-                          SecurityContextFacade securityContextFacade) {
+                          AnnonceMapper annonceMapper) {
         this.annonceRepository = annonceRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.annonceMapper = annonceMapper;
-        this.securityContextFacade = securityContextFacade;
     }
 
     public AnnonceResponseDTO findById(Long id) {
@@ -146,12 +139,25 @@ public class AnnonceService {
                     "Transition invalide: impossible d'appliquer '" + action + "' sur le statut " + annonce.getStatus());
         }
 
-        // Archive autorisee uniquement avec l'autorite metier adequate.
-        if ("archive".equals(action)) {
-            checkArchivePermission();
+        annonce.setStatus(expectedCurrentStatus.getNextStatus());
+        Annonce updated = annonceRepository.save(annonce);
+        return annonceMapper.toResponseDTO(updated);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public AnnonceResponseDTO archive(Long id, UUID currentUserId) {
+        Annonce annonce = annonceRepository.findWithRelationsById(id)
+                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
+
+        checkOwnership(annonce, currentUserId);
+
+        if (annonce.getStatus() != AnnonceStatus.PUBLISHED) {
+            throw new IllegalStateException(
+                    "Transition invalide: impossible d'archiver une annonce au statut " + annonce.getStatus());
         }
 
-        annonce.setStatus(expectedCurrentStatus.getNextStatus());
+        annonce.setStatus(AnnonceStatus.ARCHIVED);
         Annonce updated = annonceRepository.save(annonce);
         return annonceMapper.toResponseDTO(updated);
     }
@@ -159,14 +165,6 @@ public class AnnonceService {
     private void checkOwnership(Annonce annonce, UUID currentUserId) {
         if (currentUserId == null || !currentUserId.equals(annonce.getOwnerId())) {
             throw new AnnonceForbiddenException("Vous n'etes pas l'auteur de cette annonce");
-        }
-    }
-
-    private void checkArchivePermission() {
-        boolean canArchive = securityContextFacade.hasAnyAuthority(ARCHIVE_AUTHORITY, LEGACY_ADMIN_ROLE);
-
-        if (!canArchive) {
-            throw new AnnonceForbiddenException("Seul un administrateur peut archiver une annonce");
         }
     }
 }

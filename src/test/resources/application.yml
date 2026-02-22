@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+jwt:
+  secret: TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!
+  expiration: 3600000
