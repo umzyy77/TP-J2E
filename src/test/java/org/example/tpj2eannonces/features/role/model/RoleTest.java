@@ -72,8 +72,9 @@ class RoleTest {
         Role r2 = new Role();
         r2.setId(1L);
 
-        assertThat(r1).isEqualTo(r2);
-        assertThat(r1.hashCode()).isEqualTo(r2.hashCode());
+        assertThat(r1)
+                .isEqualTo(r2)
+                .hasSameHashCodeAs(r2);
     }
 
     @Test
@@ -95,7 +96,6 @@ class RoleTest {
         role.setAuthorities(auths);
 
         String result = role.toString();
-        assertThat(result).contains("ROLE_USER");
-        assertThat(result).contains("READ");
+        assertThat(result).contains("ROLE_USER", "READ");
     }
 }

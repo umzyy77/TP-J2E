@@ -31,7 +31,7 @@ public class SecurityContextFacade {
         if (principal instanceof String principalValue) {
             try {
                 return UUID.fromString(principalValue);
-            } catch (IllegalArgumentException ex) {
+            } catch (IllegalArgumentException _) {
                 throw new UnauthenticatedException(INVALID_PRINCIPAL_MESSAGE);
             }
         }

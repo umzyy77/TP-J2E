@@ -1,7 +1,6 @@
 package org.example.tpj2eannonces.features.annonce.repository;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.TestcontainersConfig;

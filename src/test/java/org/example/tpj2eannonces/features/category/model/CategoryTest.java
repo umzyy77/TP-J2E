@@ -67,7 +67,7 @@ class CategoryTest {
         Category c2 = new Category();
         c2.setId(1L);
 
-        assertThat(c1.hashCode()).isEqualTo(c2.hashCode());
+        assertThat(c1).hasSameHashCodeAs(c2);
     }
 
     @Test
@@ -76,7 +76,6 @@ class CategoryTest {
         cat.setId(1L);
 
         String result = cat.toString();
-        assertThat(result).contains("id=1");
-        assertThat(result).contains("Immobilier");
+        assertThat(result).contains("id=1", "Immobilier");
     }
 }

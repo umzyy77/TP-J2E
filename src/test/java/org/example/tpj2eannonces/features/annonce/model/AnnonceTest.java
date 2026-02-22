@@ -147,7 +147,7 @@ class AnnonceTest {
         Annonce a2 = new Annonce();
         a2.setId(1L);
 
-        assertThat(a1.hashCode()).isEqualTo(a2.hashCode());
+        assertThat(a1).hasSameHashCodeAs(a2);
     }
 
     @Test
@@ -158,8 +158,6 @@ class AnnonceTest {
         annonce.setStatus(AnnonceStatus.DRAFT);
 
         String result = annonce.toString();
-        assertThat(result).contains("id=1");
-        assertThat(result).contains("Mon Titre");
-        assertThat(result).contains("DRAFT");
+        assertThat(result).contains("id=1", "Mon Titre", "DRAFT");
     }
 }

@@ -118,19 +118,21 @@ class AnnonceServiceTest {
 
     @Test
     void update_shouldThrow_whenNotOwner() {
+        AnnonceFormDTO form = form();
         Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
-        assertThatThrownBy(() -> annonceService.update(1L, form(), OTHER_ID))
+        assertThatThrownBy(() -> annonceService.update(1L, form, OTHER_ID))
                 .isInstanceOf(AnnonceForbiddenException.class);
     }
 
     @Test
     void update_shouldThrow_whenPublished() {
+        AnnonceFormDTO form = form();
         Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
-        assertThatThrownBy(() -> annonceService.update(1L, form(), OWNER_ID))
+        assertThatThrownBy(() -> annonceService.update(1L, form, OWNER_ID))
                 .isInstanceOf(AnnonceForbiddenException.class);
     }
 
@@ -190,9 +192,10 @@ class AnnonceServiceTest {
 
     @Test
     void update_shouldThrow_whenNotFound() {
+        AnnonceFormDTO form = form();
         when(annonceRepository.findWithRelationsById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> annonceService.update(99L, form(), OWNER_ID))
+        assertThatThrownBy(() -> annonceService.update(99L, form, OWNER_ID))
                 .isInstanceOf(AnnonceNotFoundException.class);
     }
 
@@ -301,32 +304,38 @@ class AnnonceServiceTest {
     }
 
     @Test
-    void archive_shouldThrow_whenNotOwner() {
+    void archive_shouldSucceed_whenPublished_evenIfCurrentUserIsNotOwner() {
         Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
+        when(annonceRepository.save(annonce)).thenReturn(annonce);
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
 
-        assertThatThrownBy(() -> annonceService.archive(1L, OTHER_ID))
-                .isInstanceOf(AnnonceForbiddenException.class);
+        AnnonceResponseDTO result = annonceService.archive(1L, OTHER_ID);
+
+        assertThat(annonce.getStatus()).isEqualTo(AnnonceStatus.ARCHIVED);
+        assertThat(result).isNotNull();
     }
 
     // ---- create error paths ----
 
     @Test
     void create_shouldThrow_whenUserNotFound() {
+        AnnonceFormDTO form = form();
         when(userRepository.findById(OWNER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> annonceService.create(form(), OWNER_ID))
+        assertThatThrownBy(() -> annonceService.create(form, OWNER_ID))
                 .isInstanceOf(AnnonceNotFoundException.class);
     }
 
     @Test
     void create_shouldThrow_whenCategoryNotFound() {
+        AnnonceFormDTO form = form();
         User user = new User();
         user.setId(OWNER_ID);
         when(userRepository.findById(OWNER_ID)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> annonceService.create(form(), OWNER_ID))
+        assertThatThrownBy(() -> annonceService.create(form, OWNER_ID))
                 .isInstanceOf(AnnonceNotFoundException.class);
     }
 

@@ -174,8 +174,9 @@ class UserTest {
         User u2 = new User();
         u2.setId(id);
 
-        assertThat(u1).isEqualTo(u2);
-        assertThat(u1.hashCode()).isEqualTo(u2.hashCode());
+        assertThat(u1)
+                .isEqualTo(u2)
+                .hasSameHashCodeAs(u2);
     }
 
     @Test
@@ -195,8 +196,7 @@ class UserTest {
         user.setId(id);
 
         String result = user.toString();
-        assertThat(result).contains("alice");
-        assertThat(result).contains("alice@test.com");
+        assertThat(result).contains("alice", "alice@test.com");
     }
 
     @Test

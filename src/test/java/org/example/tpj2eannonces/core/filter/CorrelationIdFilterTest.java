@@ -53,7 +53,8 @@ class CorrelationIdFilterTest {
         filter.doFilterInternal(request, response, chain);
 
         String correlationId = response.getHeader("X-Correlation-ID");
-        assertThat(correlationId).isNotBlank();
-        assertThat(correlationId).isNotEqualTo("   ");
+        assertThat(correlationId)
+                .isNotBlank()
+                .isNotEqualTo("   ");
     }
 }

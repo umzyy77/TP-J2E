@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AnnonceService {
 
+    private static final String ANNONCE_NOT_FOUND_PREFIX = "Annonce non trouvee: ";
+
     private final AnnonceRepository annonceRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
@@ -44,7 +46,7 @@ public class AnnonceService {
 
     public AnnonceResponseDTO findById(Long id) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException(ANNONCE_NOT_FOUND_PREFIX + id));
         return annonceMapper.toResponseDTO(annonce);
     }
 
@@ -88,7 +90,7 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO update(Long id, AnnonceFormDTO dto, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException(ANNONCE_NOT_FOUND_PREFIX + id));
 
         checkOwnership(annonce, currentUserId);
 
@@ -112,7 +114,7 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public void delete(Long id, UUID currentUserId) {
         Annonce annonce = annonceRepository.findById(id)
-                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException(ANNONCE_NOT_FOUND_PREFIX + id));
 
         checkOwnership(annonce, currentUserId);
 
@@ -127,7 +129,7 @@ public class AnnonceService {
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO changeStatus(Long id, String action, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
+                .orElseThrow(() -> new AnnonceNotFoundException(ANNONCE_NOT_FOUND_PREFIX + id));
 
         checkOwnership(annonce, currentUserId);
 
@@ -148,9 +150,7 @@ public class AnnonceService {
     @PreAuthorize("hasRole('ADMIN')")
     public AnnonceResponseDTO archive(Long id, UUID currentUserId) {
         Annonce annonce = annonceRepository.findWithRelationsById(id)
-                .orElseThrow(() -> new AnnonceNotFoundException("Annonce non trouvee: " + id));
-
-        checkOwnership(annonce, currentUserId);
+                .orElseThrow(() -> new AnnonceNotFoundException(ANNONCE_NOT_FOUND_PREFIX + id));
 
         if (annonce.getStatus() != AnnonceStatus.PUBLISHED) {
             throw new IllegalStateException(

@@ -30,8 +30,8 @@ public class AnnonceMetaController {
 
     private static List<String> buildSortableFields() {
         return Arrays.stream(Annonce.class.getDeclaredFields())
-                .filter(f -> !f.getName().equals("serialVersionUID"))
                 .map(Field::getName)
+                .filter(name -> !name.equals("serialVersionUID"))
                 .toList();
     }
 

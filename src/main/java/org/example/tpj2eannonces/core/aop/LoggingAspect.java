@@ -16,6 +16,7 @@ public class LoggingAspect {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
 
+    @SuppressWarnings("java:S2139")
     @Around("execution(* org.example.tpj2eannonces.features..service..*(..))")
     public Object logServiceMethods(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getTarget().getClass().getSimpleName();

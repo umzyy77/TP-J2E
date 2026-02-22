@@ -6,27 +6,20 @@ import java.util.UUID;
 import org.example.tpj2eannonces.features.annonce.model.Annonce;
 import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AnnonceSpecificationsTest {
 
-    @Test
-    void hasKeyword_null_shouldReturnUnrestricted() {
-        Specification<Annonce> spec = AnnonceSpecifications.hasKeyword(null);
-        assertThat(spec).isNotNull();
-    }
-
-    @Test
-    void hasKeyword_blank_shouldReturnUnrestricted() {
-        Specification<Annonce> spec = AnnonceSpecifications.hasKeyword("  ");
-        assertThat(spec).isNotNull();
-    }
-
-    @Test
-    void hasKeyword_withValue_shouldReturnSpec() {
-        Specification<Annonce> spec = AnnonceSpecifications.hasKeyword("test");
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"  ", "test"})
+    void hasKeyword_shouldReturnSpec(String keyword) {
+        Specification<Annonce> spec = AnnonceSpecifications.hasKeyword(keyword);
         assertThat(spec).isNotNull();
     }
 

@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BaseEntityTest {
 
     static class TestEntity extends BaseEntity<Long> {
-        private Long id;
+        private final Long id;
 
         TestEntity(Long id) {
             this.id = id;
@@ -66,7 +66,7 @@ class BaseEntityTest {
         TestEntity e1 = new TestEntity(1L);
         TestEntity e2 = new TestEntity(1L);
 
-        assertThat(e1.hashCode()).isEqualTo(e2.hashCode());
+        assertThat(e1).hasSameHashCodeAs(e2);
     }
 
     @Test
@@ -74,6 +74,6 @@ class BaseEntityTest {
         TestEntity e1 = new TestEntity(null);
         TestEntity e2 = new TestEntity(null);
 
-        assertThat(e1.hashCode()).isEqualTo(e2.hashCode());
+        assertThat(e1).hasSameHashCodeAs(e2);
     }
 }

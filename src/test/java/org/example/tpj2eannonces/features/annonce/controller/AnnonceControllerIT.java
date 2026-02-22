@@ -64,12 +64,12 @@ class AnnonceControllerIT {
     @MockitoBean
     private AnnonceService annonceService;
 
-    private static RequestPostProcessor jwt(UUID userId, String... authorities) {
+    private static RequestPostProcessor jwt(String... authorities) {
         var grantedAuthorities = Arrays.stream(authorities)
                 .map(SimpleGrantedAuthority::new)
                 .toList();
         return authentication(
-                new UsernamePasswordAuthenticationToken(userId.toString(), null, grantedAuthorities));
+                new UsernamePasswordAuthenticationToken(AnnonceControllerIT.USER_ID.toString(), null, grantedAuthorities));
     }
 
     // ==== 2b/2c/2d. Securite ====
@@ -93,11 +93,21 @@ class AnnonceControllerIT {
         }
 
         @Test
-        void shouldReturn403WhenRoleIsInsufficient() throws Exception {
+        void shouldAllowAnyAuthenticatedRoleToAccessProtectedApi() throws Exception {
+            when(annonceService.findAll(any(Pageable.class))).thenReturn(pageOf(response(1L)));
+
             mockMvc.perform(get("/api/annonces")
-                            .with(jwt(USER_ID, "ROLE_VISITOR")))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+                            .with(jwt("ROLE_VISITOR")))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void shouldAllowRoleAdminToAccessProtectedApi() throws Exception {
+            when(annonceService.findAll(any(Pageable.class))).thenReturn(pageOf(response(1L)));
+
+            mockMvc.perform(get("/api/annonces")
+                            .with(jwt("ROLE_ADMIN")))
+                    .andExpect(status().isOk());
         }
     }
 
@@ -113,7 +123,7 @@ class AnnonceControllerIT {
             Page<AnnonceResponseDTO> page = pageOf(response(1L));
             when(annonceService.findAll(any(Pageable.class))).thenReturn(page);
 
-            mockMvc.perform(get("/api/annonces").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(get("/api/annonces").with(jwt("ROLE_USER")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].id").value(1))
                     .andExpect(jsonPath("$.content[0].title").value("Titre 1"));
@@ -129,7 +139,7 @@ class AnnonceControllerIT {
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/annonces")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .param("q", "velo"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].id").value(2));
@@ -145,7 +155,7 @@ class AnnonceControllerIT {
         void shouldReturnAnnonceWhenExists() throws Exception {
             when(annonceService.findById(1L)).thenReturn(response(1L));
 
-            mockMvc.perform(get("/api/annonces/1").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(get("/api/annonces/1").with(jwt("ROLE_USER")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.title").value("Titre 1"));
@@ -156,7 +166,7 @@ class AnnonceControllerIT {
             when(annonceService.findById(99L))
                     .thenThrow(new AnnonceNotFoundException("Annonce non trouvee: 99"));
 
-            mockMvc.perform(get("/api/annonces/99").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(get("/api/annonces/99").with(jwt("ROLE_USER")))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
@@ -173,7 +183,7 @@ class AnnonceControllerIT {
             when(annonceService.create(any(AnnonceFormDTO.class), eq(USER_ID))).thenReturn(created);
 
             mockMvc.perform(post("/api/annonces")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(form())))
                     .andExpect(status().isCreated())
@@ -196,7 +206,7 @@ class AnnonceControllerIT {
             AnnonceFormDTO invalid = new AnnonceFormDTO("", "", "", "not-email", null);
 
             mockMvc.perform(post("/api/annonces")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(invalid)))
                     .andExpect(status().isBadRequest())
@@ -217,7 +227,7 @@ class AnnonceControllerIT {
                     .thenReturn(response(5L));
 
             mockMvc.perform(put("/api/annonces/5")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(form())))
                     .andExpect(status().isOk())
@@ -230,7 +240,7 @@ class AnnonceControllerIT {
                     .thenThrow(new AnnonceForbiddenException("Vous n'etes pas l'auteur de cette annonce"));
 
             mockMvc.perform(put("/api/annonces/5")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(form())))
                     .andExpect(status().isForbidden())
@@ -243,7 +253,7 @@ class AnnonceControllerIT {
                     .thenThrow(new AnnonceNotFoundException("Annonce non trouvee: 99"));
 
             mockMvc.perform(put("/api/annonces/99")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(form())))
                     .andExpect(status().isNotFound())
@@ -258,7 +268,7 @@ class AnnonceControllerIT {
 
         @Test
         void shouldDeleteAndReturn204() throws Exception {
-            mockMvc.perform(delete("/api/annonces/9").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(delete("/api/annonces/9").with(jwt("ROLE_USER")))
                     .andExpect(status().isNoContent());
 
             verify(annonceService).delete(9L, USER_ID);
@@ -277,7 +287,7 @@ class AnnonceControllerIT {
             doThrow(new AnnonceNotFoundException("Annonce non trouvee: 99"))
                     .when(annonceService).delete(99L, USER_ID);
 
-            mockMvc.perform(delete("/api/annonces/99").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(delete("/api/annonces/99").with(jwt("ROLE_USER")))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }
@@ -287,7 +297,7 @@ class AnnonceControllerIT {
             doThrow(new AnnonceForbiddenException("Vous n'etes pas l'auteur de cette annonce"))
                     .when(annonceService).delete(9L, USER_ID);
 
-            mockMvc.perform(delete("/api/annonces/9").with(jwt(USER_ID, "ROLE_USER")))
+            mockMvc.perform(delete("/api/annonces/9").with(jwt("ROLE_USER")))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.error").value("FORBIDDEN"));
         }
@@ -303,7 +313,7 @@ class AnnonceControllerIT {
             when(annonceService.changeStatus(7L, "publish", USER_ID)).thenReturn(response(7L));
 
             mockMvc.perform(patch("/api/annonces/7")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"action\":\"publish\"}"))
                     .andExpect(status().isOk())
@@ -313,7 +323,7 @@ class AnnonceControllerIT {
         @Test
         void shouldReturn400WhenActionIsBlank() throws Exception {
             mockMvc.perform(patch("/api/annonces/7")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"action\":\"\"}"))
                     .andExpect(status().isBadRequest())
@@ -328,7 +338,7 @@ class AnnonceControllerIT {
                     .thenThrow(new IllegalArgumentException("Action inconnue: invalid"));
 
             mockMvc.perform(patch("/api/annonces/7")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"action\":\"invalid\"}"))
                     .andExpect(status().isBadRequest())
@@ -340,7 +350,7 @@ class AnnonceControllerIT {
             when(annonceService.archive(7L, USER_ID)).thenReturn(response(7L));
 
             mockMvc.perform(patch("/api/annonces/7")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"action\":\"archive\"}"))
                     .andExpect(status().isOk())
@@ -356,7 +366,7 @@ class AnnonceControllerIT {
                     .thenThrow(new IllegalStateException("Transition invalide"));
 
             mockMvc.perform(patch("/api/annonces/7")
-                            .with(jwt(USER_ID, "ROLE_USER"))
+                            .with(jwt("ROLE_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"action\":\"publish\"}"))
                     .andExpect(status().isConflict())

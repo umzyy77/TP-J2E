@@ -2,7 +2,6 @@ package org.example.tpj2eannonces.core.security;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .filter(authority -> authority != null && !authority.isBlank())
                         .map(SimpleGrantedAuthority::new)
                         .distinct()
-                        .collect(Collectors.toList());
+                        .toList();
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, null, authorities);

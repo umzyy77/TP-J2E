@@ -41,7 +41,7 @@ class AuthServiceTest {
 
     @Test
     void login_shouldReturnToken_whenCredentialsAreValid() {
-        User user = userWithRole("ROLE_USER");
+        User user = userWithRole();
         when(userService.findWithRoleByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordService.matches("secret", user.getPassword())).thenReturn(true);
         when(jwtService.generateToken(any(UUID.class), eq("alice"), anyCollection(), anyCollection()))
@@ -56,34 +56,37 @@ class AuthServiceTest {
 
     @Test
     void login_shouldThrow_whenUserNotFound() {
+        LoginDTO loginDTO = new LoginDTO("unknown", "pass");
         when(userService.findWithRoleByUsername("unknown")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login(new LoginDTO("unknown", "pass")))
+        assertThatThrownBy(() -> authService.login(loginDTO))
                 .isInstanceOf(AuthUnauthorizedException.class);
     }
 
     @Test
     void login_shouldThrow_whenPasswordIsWrong() {
-        User user = userWithRole("ROLE_USER");
+        LoginDTO loginDTO = new LoginDTO("alice", "bad");
+        User user = userWithRole();
         when(userService.findWithRoleByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordService.matches(anyString(), anyString())).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login(new LoginDTO("alice", "bad")))
+        assertThatThrownBy(() -> authService.login(loginDTO))
                 .isInstanceOf(AuthUnauthorizedException.class);
     }
 
     @Test
     void login_shouldThrow_whenUserHasNoRole() {
+        LoginDTO loginDTO = new LoginDTO("alice", "secret");
         User user = userWithoutRole();
         when(userService.findWithRoleByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordService.matches(anyString(), anyString())).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.login(new LoginDTO("alice", "secret")))
+        assertThatThrownBy(() -> authService.login(loginDTO))
                 .isInstanceOf(AuthUnauthorizedException.class);
     }
 
-    private User userWithRole(String roleName) {
-        Role role = new Role(roleName);
+    private User userWithRole() {
+        Role role = new Role("ROLE_USER");
         role.setId(1L);
         role.setAuthorities(Set.of("ANNONCE_READ", "ANNONCE_WRITE"));
 

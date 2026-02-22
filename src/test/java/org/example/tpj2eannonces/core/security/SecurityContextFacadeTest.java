@@ -3,6 +3,7 @@ package org.example.tpj2eannonces.core.security;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.springframework.security.core.GrantedAuthority;
 
@@ -35,7 +36,7 @@ class SecurityContextFacadeTest {
 
     @Test
     void requireCurrentUserId_shouldThrow_whenNoAuthentication() {
-        assertThatThrownBy(() -> facade.requireCurrentUserId())
+        assertThatThrownBy(facade::requireCurrentUserId)
                 .isInstanceOf(UnauthenticatedException.class);
     }
 
@@ -43,7 +44,7 @@ class SecurityContextFacadeTest {
     void requireCurrentUserId_shouldThrow_whenPrincipalIsNotUUID() {
         setAuthentication("not-a-uuid", "ROLE_USER");
 
-        assertThatThrownBy(() -> facade.requireCurrentUserId())
+        assertThatThrownBy(facade::requireCurrentUserId)
                 .isInstanceOf(UnauthenticatedException.class);
     }
 
@@ -136,7 +137,7 @@ class SecurityContextFacadeTest {
         var auth = new UsernamePasswordAuthenticationToken(12345, null, List.of());
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        assertThatThrownBy(() -> facade.requireCurrentUserId())
+        assertThatThrownBy(facade::requireCurrentUserId)
                 .isInstanceOf(UnauthenticatedException.class);
     }
 
@@ -145,12 +146,12 @@ class SecurityContextFacadeTest {
         var auth = new UsernamePasswordAuthenticationToken(null, null);
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        assertThatThrownBy(() -> facade.requireCurrentUserId())
+        assertThatThrownBy(facade::requireCurrentUserId)
                 .isInstanceOf(UnauthenticatedException.class);
     }
 
     private void setAuthentication(String principal, String... authorities) {
-        var grantedAuthorities = List.of(authorities).stream()
+        var grantedAuthorities = Stream.of(authorities)
                 .map(SimpleGrantedAuthority::new)
                 .toList();
         var auth = new UsernamePasswordAuthenticationToken(principal, null, grantedAuthorities);
