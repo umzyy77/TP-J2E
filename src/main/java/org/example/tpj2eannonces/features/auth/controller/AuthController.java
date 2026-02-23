@@ -33,16 +33,14 @@ public class AuthController {
     @Operation(summary = "Connexion", description = "Authentifie un utilisateur et retourne un token JWT")
     @ApiResponse(responseCode = "200", description = "Connexion reussie",
             content = @Content(schema = @Schema(implementation = LoginResponseDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"token": "eyJhbGciOiJIUzI1NiJ9...", "expiresIn": 3600000}""")))
+                    examples = @ExampleObject(value = "{\"token\": \"eyJhbGciOiJIUzI1NiJ9...\", \"expiresIn\": 3600000}")))
     @ApiResponse(responseCode = "401", description = "Identifiants invalides",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "UNAUTHORIZED", "messages": ["Identifiants invalides"]}""")))
+                    examples = @ExampleObject(value = "{\"error\": \"UNAUTHORIZED\", \"messages\": [\"Identifiants invalides\"]}")))
     @ApiResponse(responseCode = "400", description = "Donnees invalides",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "VALIDATION_ERROR", "messages": ["username: Le nom d'utilisateur est requis"]}""")))
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"VALIDATION_ERROR\", \"messages\": [\"username: Le nom d'utilisateur est requis\"]}")))
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginDTO dto) {
         return ResponseEntity.ok(authService.login(dto));
     }

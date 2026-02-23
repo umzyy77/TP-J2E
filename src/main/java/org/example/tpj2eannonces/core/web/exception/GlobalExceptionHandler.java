@@ -22,6 +22,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String BAD_REQUEST = "BAD_REQUEST";
 
     @ExceptionHandler(ApiBusinessException.class)
     public ResponseEntity<ApiErrorDTO> handleBusinessException(ApiBusinessException ex) {
@@ -32,7 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorDTO> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorDTO.of("BAD_REQUEST", ex.getMessage()));
+                .body(ApiErrorDTO.of(BAD_REQUEST, ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -44,19 +45,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiErrorDTO> handleDataAccess(DataAccessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorDTO.of("BAD_REQUEST", ex.getMessage()));
+                .body(ApiErrorDTO.of(BAD_REQUEST, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorDTO.of("BAD_REQUEST", "Parametre invalide: " + ex.getName()));
+                .body(ApiErrorDTO.of(BAD_REQUEST, "Parametre invalide: " + ex.getName()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorDTO> handleMessageNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorDTO.of("BAD_REQUEST", "Corps de la requete manquant ou invalide"));
+                .body(ApiErrorDTO.of(BAD_REQUEST, "Corps de la requete manquant ou invalide"));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
@@ -68,7 +69,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<ApiErrorDTO> handlePropertyReference(PropertyReferenceException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorDTO.of("BAD_REQUEST", "Parametre de tri invalide: " + ex.getPropertyName()));
+                .body(ApiErrorDTO.of(BAD_REQUEST, "Parametre de tri invalide: " + ex.getPropertyName()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

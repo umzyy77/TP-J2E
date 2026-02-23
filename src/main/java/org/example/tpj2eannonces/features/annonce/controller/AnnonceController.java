@@ -74,8 +74,7 @@ public class AnnonceController {
     @ApiResponse(responseCode = "200", description = "Annonce trouvee")
     @ApiResponse(responseCode = "404", description = "Annonce non trouvee",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "NOT_FOUND", "messages": ["Annonce non trouvee: 99"]}""")))
+                    examples = @ExampleObject(value = "{\"error\": \"NOT_FOUND\", \"messages\": [\"Annonce non trouvee: 99\"]}")))
     public ResponseEntity<AnnonceResponseDTO> getById(
             @Parameter(description = "ID de l'annonce", example = "1") @PathVariable Long id) {
         return ResponseEntity.ok(annonceService.findById(id));
@@ -86,8 +85,8 @@ public class AnnonceController {
     @ApiResponse(responseCode = "201", description = "Annonce creee")
     @ApiResponse(responseCode = "400", description = "Donnees invalides",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "VALIDATION_ERROR", "messages": ["title: Le titre est obligatoire"]}""")))
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"VALIDATION_ERROR\", \"messages\": [\"title: Le titre est obligatoire\"]}")))
     @ApiResponse(responseCode = "401", description = "Non authentifie",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class)))
     public ResponseEntity<AnnonceResponseDTO> create(@Valid @RequestBody AnnonceFormDTO dto) {
@@ -107,8 +106,8 @@ public class AnnonceController {
     @ApiResponse(responseCode = "200", description = "Annonce modifiee")
     @ApiResponse(responseCode = "403", description = "Non autorise (pas l'auteur ou annonce publiee)",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "FORBIDDEN", "messages": ["Vous n'etes pas l'auteur de cette annonce"]}""")))
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"FORBIDDEN\", \"messages\": [\"Vous n'etes pas l'auteur de cette annonce\"]}")))
     @ApiResponse(responseCode = "404", description = "Annonce non trouvee",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class)))
     public ResponseEntity<AnnonceResponseDTO> update(
@@ -123,8 +122,8 @@ public class AnnonceController {
     @ApiResponse(responseCode = "204", description = "Annonce supprimee")
     @ApiResponse(responseCode = "403", description = "Non autorise (pas l'auteur ou annonce non archivee)",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "FORBIDDEN", "messages": ["Seule une annonce archivee peut etre supprimee"]}""")))
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"FORBIDDEN\", \"messages\": [\"Seule une annonce archivee peut etre supprimee\"]}")))
     @ApiResponse(responseCode = "404", description = "Annonce non trouvee",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class)))
     public ResponseEntity<Void> delete(
@@ -141,8 +140,8 @@ public class AnnonceController {
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class)))
     @ApiResponse(responseCode = "409", description = "Transition de statut invalide",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
-                    examples = @ExampleObject(value = """
-                            {"error": "CONFLICT", "messages": ["Transition invalide: impossible d'appliquer 'publish' sur le statut PUBLISHED"]}""")))
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"CONFLICT\", \"messages\": [\"Transition invalide: impossible d'appliquer 'publish' sur le statut PUBLISHED\"]}")))
     public ResponseEntity<AnnonceResponseDTO> changeStatus(
             @Parameter(description = "ID de l'annonce", example = "1") @PathVariable Long id,
             @Valid @RequestBody AnnonceStatusDTO dto) {
