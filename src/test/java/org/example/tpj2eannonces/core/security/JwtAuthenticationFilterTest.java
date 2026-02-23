@@ -16,9 +16,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.ServletException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +50,9 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer valid-token");
 
         when(jwtService.validateToken("valid-token")).thenReturn(true);
-        when(jwtClaimsService.extractUserId("valid-token")).thenReturn(userId);
+        Claims claims = mock(Claims.class);
+        when(jwtService.parseToken("valid-token")).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(userId.toString());
         when(jwtClaimsService.extractAuthorities("valid-token")).thenReturn(List.of("ROLE_USER", "ANNONCE_READ"));
 
         filter.doFilterInternal(request, response, chain);
@@ -107,7 +111,9 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer valid-token");
 
         when(jwtService.validateToken("valid-token")).thenReturn(true);
-        when(jwtClaimsService.extractUserId("valid-token")).thenReturn(userId);
+        Claims claims = mock(Claims.class);
+        when(jwtService.parseToken("valid-token")).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(userId.toString());
         when(jwtClaimsService.extractAuthorities("valid-token")).thenReturn(Arrays.asList("ROLE_USER", null, "", "  "));
 
         filter.doFilterInternal(request, response, chain);
@@ -115,5 +121,23 @@ class JwtAuthenticationFilterTest {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
         assertThat(auth.getAuthorities()).hasSize(1);
+    }
+
+    @Test
+    void shouldNotSetAuthentication_whenTokenSubjectIsNotUuid() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        request.addHeader("Authorization", "Bearer valid-token");
+
+        when(jwtService.validateToken("valid-token")).thenReturn(true);
+        Claims claims = mock(Claims.class);
+        when(jwtService.parseToken("valid-token")).thenReturn(claims);
+        when(claims.getSubject()).thenReturn("not-a-uuid");
+
+        filter.doFilterInternal(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 }

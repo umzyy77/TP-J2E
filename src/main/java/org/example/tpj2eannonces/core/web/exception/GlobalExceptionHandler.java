@@ -5,9 +5,11 @@ import java.util.List;
 import org.example.tpj2eannonces.core.web.dto.ApiErrorDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -54,6 +56,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleMessageNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiErrorDTO.of("BAD_REQUEST", "Corps de la requete manquant ou invalide"));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorDTO> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiErrorDTO.of("UNSUPPORTED_MEDIA_TYPE", "Content-Type non supporte"));
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiErrorDTO> handlePropertyReference(PropertyReferenceException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorDTO.of("BAD_REQUEST", "Parametre de tri invalide: " + ex.getPropertyName()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
