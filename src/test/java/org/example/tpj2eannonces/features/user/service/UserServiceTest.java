@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +43,27 @@ class UserServiceTest {
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThat(userService.findById(id)).isEmpty();
+    }
+
+    @Test
+    void getById_shouldReturnUser_whenExists() {
+        UUID id = UUID.randomUUID();
+        User user = new User("alice", "alice@test.com", "pass");
+        user.setId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+
+        User result = userService.getById(id);
+
+        assertThat(result.getUsername()).isEqualTo("alice");
+    }
+
+    @Test
+    void getById_shouldThrow_whenNotExists() {
+        UUID id = UUID.randomUUID();
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getById(id))
+                .isInstanceOf(org.example.tpj2eannonces.features.user.exception.UserNotFoundException.class);
     }
 
     @Test

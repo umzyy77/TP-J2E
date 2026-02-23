@@ -14,9 +14,9 @@ import org.example.tpj2eannonces.features.annonce.model.Annonce;
 import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
 import org.example.tpj2eannonces.features.annonce.repository.AnnonceRepository;
 import org.example.tpj2eannonces.features.category.model.Category;
-import org.example.tpj2eannonces.features.category.repository.CategoryRepository;
+import org.example.tpj2eannonces.features.category.service.CategoryService;
 import org.example.tpj2eannonces.features.user.model.User;
-import org.example.tpj2eannonces.features.user.repository.UserRepository;
+import org.example.tpj2eannonces.features.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -45,9 +45,9 @@ class AnnonceServiceTest {
     @Mock
     private AnnonceRepository annonceRepository;
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
     @Mock
-    private CategoryRepository categoryRepository;
+    private CategoryService categoryService;
     @Mock
     private AnnonceMapper annonceMapper;
 
@@ -102,8 +102,8 @@ class AnnonceServiceTest {
         category.setId(1L);
         Annonce entity = annonce(1L, AnnonceStatus.DRAFT);
 
-        when(userRepository.findById(OWNER_ID)).thenReturn(Optional.of(user));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(userService.getById(OWNER_ID)).thenReturn(user);
+        when(categoryService.getById(1L)).thenReturn(category);
         when(annonceMapper.toEntity(form)).thenReturn(entity);
         when(annonceRepository.save(entity)).thenReturn(entity);
         when(annonceMapper.toResponseDTO(entity)).thenReturn(responseDto(1L));
@@ -181,7 +181,7 @@ class AnnonceServiceTest {
         newCat.setId(99L);
 
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
-        when(categoryRepository.findById(99L)).thenReturn(Optional.of(newCat));
+        when(categoryService.getById(99L)).thenReturn(newCat);
         when(annonceRepository.save(annonce)).thenReturn(annonce);
         when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
 
@@ -205,10 +205,11 @@ class AnnonceServiceTest {
         AnnonceFormDTO form = new AnnonceFormDTO("Titre", "Desc", "Adresse", "m@m.com", 99L);
 
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
-        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+        when(categoryService.getById(99L))
+                .thenThrow(new org.example.tpj2eannonces.features.category.exception.CategoryNotFoundException("Categorie non trouvee: 99"));
 
         assertThatThrownBy(() -> annonceService.update(1L, form, OWNER_ID))
-                .isInstanceOf(AnnonceNotFoundException.class);
+                .isInstanceOf(org.example.tpj2eannonces.features.category.exception.CategoryNotFoundException.class);
     }
 
     // ---- search ----
@@ -321,10 +322,11 @@ class AnnonceServiceTest {
     @Test
     void create_shouldThrow_whenUserNotFound() {
         AnnonceFormDTO form = form();
-        when(userRepository.findById(OWNER_ID)).thenReturn(Optional.empty());
+        when(userService.getById(OWNER_ID))
+                .thenThrow(new org.example.tpj2eannonces.features.user.exception.UserNotFoundException("Utilisateur non trouve: " + OWNER_ID));
 
         assertThatThrownBy(() -> annonceService.create(form, OWNER_ID))
-                .isInstanceOf(AnnonceNotFoundException.class);
+                .isInstanceOf(org.example.tpj2eannonces.features.user.exception.UserNotFoundException.class);
     }
 
     @Test
@@ -332,11 +334,12 @@ class AnnonceServiceTest {
         AnnonceFormDTO form = form();
         User user = new User();
         user.setId(OWNER_ID);
-        when(userRepository.findById(OWNER_ID)).thenReturn(Optional.of(user));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userService.getById(OWNER_ID)).thenReturn(user);
+        when(categoryService.getById(1L))
+                .thenThrow(new org.example.tpj2eannonces.features.category.exception.CategoryNotFoundException("Categorie non trouvee: 1"));
 
         assertThatThrownBy(() -> annonceService.create(form, OWNER_ID))
-                .isInstanceOf(AnnonceNotFoundException.class);
+                .isInstanceOf(org.example.tpj2eannonces.features.category.exception.CategoryNotFoundException.class);
     }
 
     // ---- delete error paths ----

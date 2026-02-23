@@ -13,9 +13,9 @@ import org.example.tpj2eannonces.features.annonce.model.AnnonceStatus;
 import org.example.tpj2eannonces.features.annonce.repository.AnnonceRepository;
 import org.example.tpj2eannonces.features.annonce.repository.AnnonceSpecifications;
 import org.example.tpj2eannonces.features.category.model.Category;
-import org.example.tpj2eannonces.features.category.repository.CategoryRepository;
+import org.example.tpj2eannonces.features.category.service.CategoryService;
 import org.example.tpj2eannonces.features.user.model.User;
-import org.example.tpj2eannonces.features.user.repository.UserRepository;
+import org.example.tpj2eannonces.features.user.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,17 +30,17 @@ public class AnnonceService {
     private static final String ANNONCE_NOT_FOUND_PREFIX = "Annonce non trouvee: ";
 
     private final AnnonceRepository annonceRepository;
-    private final UserRepository userRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserService userService;
+    private final CategoryService categoryService;
     private final AnnonceMapper annonceMapper;
 
     public AnnonceService(AnnonceRepository annonceRepository,
-                          UserRepository userRepository,
-                          CategoryRepository categoryRepository,
+                          UserService userService,
+                          CategoryService categoryService,
                           AnnonceMapper annonceMapper) {
         this.annonceRepository = annonceRepository;
-        this.userRepository = userRepository;
-        this.categoryRepository = categoryRepository;
+        this.userService = userService;
+        this.categoryService = categoryService;
         this.annonceMapper = annonceMapper;
     }
 
@@ -73,10 +73,8 @@ public class AnnonceService {
     @Transactional
     @PreAuthorize("isAuthenticated()")
     public AnnonceResponseDTO create(AnnonceFormDTO dto, UUID authorId) {
-        User author = userRepository.findById(authorId)
-                .orElseThrow(() -> new AnnonceNotFoundException("Utilisateur non trouve: " + authorId));
-        Category category = categoryRepository.findById(dto.categoryId())
-                .orElseThrow(() -> new AnnonceNotFoundException("Categorie non trouvee: " + dto.categoryId()));
+        User author = userService.getById(authorId);
+        Category category = categoryService.getById(dto.categoryId());
 
         Annonce annonce = annonceMapper.toEntity(dto);
         annonce.setAuthor(author);
@@ -101,8 +99,7 @@ public class AnnonceService {
         annonceMapper.updateEntityFromDTO(dto, annonce);
 
         if (!annonce.getCategory().getId().equals(dto.categoryId())) {
-            Category category = categoryRepository.findById(dto.categoryId())
-                    .orElseThrow(() -> new AnnonceNotFoundException("Categorie non trouvee: " + dto.categoryId()));
+            Category category = categoryService.getById(dto.categoryId());
             annonce.setCategory(category);
         }
 

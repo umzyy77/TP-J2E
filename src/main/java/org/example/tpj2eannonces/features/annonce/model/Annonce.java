@@ -1,13 +1,12 @@
 package org.example.tpj2eannonces.features.annonce.model;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
 import org.example.tpj2eannonces.features.category.model.Category;
 import org.example.tpj2eannonces.features.user.model.User;
+import org.example.tpj2eannonces.shared.model.BaseEntity;
 import org.example.tpj2eannonces.shared.model.OwnableByUser;
 
 import jakarta.persistence.Column;
@@ -31,7 +30,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "annonce")
-public class Annonce implements Serializable, OwnableByUser {
+public class Annonce extends BaseEntity<Long> implements OwnableByUser {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -106,6 +105,7 @@ public class Annonce implements Serializable, OwnableByUser {
         this.date = LocalDateTime.now();
     }
 
+    @Override
     public Long getId() {
         return id;
     }
@@ -193,15 +193,12 @@ public class Annonce implements Serializable, OwnableByUser {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Annonce annonce = (Annonce) o;
-        return Objects.equals(id, annonce.id);
+        return super.equals(o);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return super.hashCode();
     }
 
     @Override
