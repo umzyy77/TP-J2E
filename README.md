@@ -1,77 +1,148 @@
-# MasterAnnonce - TP3 Backend API REST
+# MasterAnnonce - TP4 Spring Boot
 
-Backend Java/Jakarta EE expose en API REST JSON, securise via JAAS + Bearer token.
+API REST Spring Boot (JWT, JPA, Actuator) avec outillage DevOps pour execution locale, conteneurisation et qualite.
 
-## Consigne TP
+## Documentation
 
-- Redirection vers le sujet: [TP_AIR_3_Backend_API](./fichier%20md%20prog%20java%202e/semaine%203/TP_AIR_3_Backend_API.md)
+- Sujet TP4: `fichier-md-prog-java-2e/semaine4/TP_AIR_4_Spring_Boot.md`
+- Details architecture/metier: `docs/TP4_README.md`
 
-## Stack
+## Stack technique
 
 - Java 25
-- Jakarta EE 10 (JAX-RS, Validation, Persistence)
-- Jersey 3.1.6
-- Hibernate 6.6.4.Final
-- PostgreSQL (runtime) / H2 in-memory (tests)
+- Spring Boot 4.0.2
+- Spring Security + JWT
+- Spring Data JPA + PostgreSQL
+- Spring Actuator
+- JUnit 5, Mockito, Testcontainers
+- Docker / Docker Compose
+- JaCoCo + Sonar (configuration dans `sonar-project.properties`)
 
-## Architecture
+## Demarrage rapide (local)
 
-```
-Client HTTP -> Resource (JAX-RS) -> Service (metier + transactions) -> Repository (JPA) -> DB
-```
-
-## Endpoints principaux
-
-- `POST /api/login` : authentification, renvoie `{ token, expiresIn }`
-- `GET /api/annonces`
-- `GET /api/annonces/{id}`
-- `POST /api/annonces` (auth)
-- `PUT /api/annonces/{id}` (auth)
-- `PATCH /api/annonces/{id}` (auth)
-- `DELETE /api/annonces/{id}` (auth)
-- `GET /api/openapi` : spec OpenAPI JSON
-
-## Regles metier cle
-
-- Seul l'auteur (derive du token) peut modifier/supprimer.
-- Une annonce `PUBLISHED` est immutable.
-- Suppression autorisee uniquement en statut `ARCHIVED`.
-- Concurrence optimiste via `@Version`.
-
-## Lancer
+1. Lancer PostgreSQL via Docker:
 
 ```bash
-mvn clean package
-mvn cargo:run
+docker compose up -d postgres
 ```
 
-## Tests
+2. Lancer l'application:
 
 ```bash
-# Unitaires uniquement
+mvn spring-boot:run
+```
+
+3. Endpoints utiles:
+
+- API: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui`
+- Health: `http://localhost:8080/actuator/health`
+- Info: `http://localhost:8080/actuator/info`
+
+## Demarrage full Docker (app + postgres)
+
+Commande unique:
+
+```bash
+docker compose up --build -d
+```
+
+Variables de configuration:
+
+- Fichier exemple: `.env.example`
+- Port API Docker: `APP_PORT` (defaut `8080`)
+- Port DB Docker: `DB_PORT` (defaut `5432`)
+
+Si le port `8080` est deja pris:
+
+```powershell
+$env:APP_PORT='8081'
+docker compose up --build -d
+```
+
+Endpoints en mode Docker (si `APP_PORT=8081`):
+
+- API: `http://localhost:8081`
+- Health: `http://localhost:8081/actuator/health`
+- Info: `http://localhost:8081/actuator/info`
+
+## Commandes DevOps utiles
+
+Afficher les services:
+
+```bash
+docker compose ps
+```
+
+Logs application:
+
+```bash
+docker compose logs -f app
+```
+
+Arret:
+
+```bash
+docker compose down
+```
+
+Arret + suppression volume DB:
+
+```bash
+docker compose down -v
+```
+
+## Tests et qualite
+
+Unitaires:
+
+```bash
 mvn test
+```
 
-# Integration uniquement
-mvn verify -DskipUnitTests=true
+Integration:
 
-# Tous les tests (unitaires + integration)
+```bash
+mvn integration-test
+```
+
+Suite complete:
+
+```bash
 mvn verify
 ```
 
-## Logging structure
+## Actuator (Exercice 11)
 
-- Logback JSON: `src/main/resources/logback.xml`
+- `GET /actuator/health` expose l'etat global + composant `db`
+- `GET /actuator/info` expose `info.app.name`, `info.app.description`, `info.app.version`
 
-## OpenAPI
+Configuration principale: `src/main/resources/application.yml`
 
-- Source: `src/main/resources/openapi.yaml`
-- Exposition HTTP (JSON): `GET /api/openapi`
+## Dockerisation (Exercice 12)
 
-## Test de charge simple
+- `Dockerfile` multi-stage present a la racine
+- `docker-compose.yml` lance `app` + `postgres`
+- Healthcheck PostgreSQL configure pour la dependance applicative
 
-- Script k6: `docs/load-test-k6.js`
-- Exemple:
+## CI / Pipeline (Exercice 13)
+
+Le workflow GitHub Actions n'est pas encore versionne dans ce repo (`.github/workflows/ci.yml` absent).
+
+Commande cible pour CI:
 
 ```bash
-k6 run -e BASE_URL=http://localhost:8080/MasterAnnonce/api docs/load-test-k6.js
+mvn -B clean verify
+```
+
+## Sonar
+
+Configuration projet:
+
+- `sonar-project.properties`
+
+Exemple d'analyse:
+
+```bash
+mvn clean verify sonar:sonar -Dsonar.token=<TOKEN>
 ```
