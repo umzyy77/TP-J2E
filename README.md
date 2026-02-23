@@ -6,6 +6,7 @@ API REST Spring Boot (JWT, JPA, Actuator) avec outillage DevOps pour execution l
 
 - Sujet TP4: `fichier-md-prog-java-2e/semaine4/TP_AIR_4_Spring_Boot.md`
 - Details architecture/metier: `docs/TP4_README.md`
+- README complet du TP4: [ouvrir le README du TP](docs/TP4_README.md)
 
 ## Stack technique
 
@@ -127,13 +128,56 @@ Configuration principale: `src/main/resources/application.yml`
 
 ## CI / Pipeline (Exercice 13)
 
-Le workflow GitHub Actions n'est pas encore versionne dans ce repo (`.github/workflows/ci.yml` absent).
+Workflow GitHub Actions: `.github/workflows/ci.yml`
+
+Declenchements:
+
+- `push` sur n'importe quelle branche
+- `pull_request` vers `main`
+
+Choix Java:
+
+- Le projet est maintenu en Java 25, donc la CI est configuree en Java 25.
+
+Etapes executees:
+
+- Checkout (`actions/checkout`)
+- Setup Java 25 + cache Maven (`actions/setup-java` avec `cache: maven`)
+- Build + tests + packaging: `mvn -B clean verify` (aucun skip)
+- Publication artifact JAR nomme `master-annonce-jar`
+- Publication artifact JaCoCo (`jacoco-report`)
+- Build Docker sur `main`/tag + publication artifact image (`master-annonce-docker-image`)
+
+Strategie DB en CI (choix demande):
+
+- Option retenue: **Testcontainers**
+- Raisons: pas de service PostgreSQL declare dans le workflow, tests d'integration auto-portables, pipeline plus reproductible.
+
+Artifact principal attendu:
+
+- Nom: `master-annonce-jar`
+- Contenu: JAR Spring Boot genere dans `target/`
+
+Preuve du workflow vert:
+
+- Lien du dernier run GitHub Actions: a renseigner apres premier push sur GitHub.
 
 Commande cible pour CI:
 
 ```bash
 mvn -B clean verify
 ```
+
+Problemes rencontres (court retour):
+
+1. L'enonce propose Java 17/21, mais le projet est deja en Java 25.
+Solution: pipeline alignee sur Java 25 pour rester coherent avec le code source et l'environnement local.
+
+2. Les tests d'integration ont besoin d'une base PostgreSQL.
+Solution: Testcontainers est utilise pour eviter une configuration manuelle d'un service DB dans le workflow.
+
+3. Le build Docker ne doit pas ralentir toutes les branches.
+Solution: job Docker limite aux `push` sur `main` (ou tag), tout en gardant les tests sur tous les push/PR.
 
 ## Sonar
 

@@ -51,6 +51,8 @@ src/main/java/org/example/tpj2eannonces/
 | JUnit 5 + Mockito | via Spring Boot Test |
 | JaCoCo | 0.8.14 |
 
+Note: ce TP4 est volontairement realise en Java 25 pour rester a jour.
+
 ## Endpoints API
 
 ### Annonces
@@ -143,4 +145,26 @@ mvn test
 
 # Tests unitaires + integration
 mvn verify
+```
+
+## Docker (Exercice 12)
+
+Commande unique pour lancer l'application + PostgreSQL:
+
+```bash
+docker compose up --build -d
+```
+
+Endpoints utiles:
+
+- API: `http://localhost:8080`
+- Health: `http://localhost:8080/actuator/health`
+- Info: `http://localhost:8080/actuator/info`
+
+Si le port 8080 est deja pris, definir `APP_PORT` dans `.env` (ex: `APP_PORT=8081`).
+
+Arreter et nettoyer:
+
+```bash
+docker compose down -v
 ```
