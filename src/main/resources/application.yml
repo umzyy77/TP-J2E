@@ -32,3 +32,25 @@ springdoc:
 jwt:
   secret: MasterAnnonceSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!
   expiration: 86400000
+
+management:
+  info:
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: API REST MasterAnnonce
+    version: 1.0.0

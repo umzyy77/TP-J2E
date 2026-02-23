@@ -12,3 +12,25 @@ spring:
 jwt:
   secret: TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!
   expiration: 3600000
+
+management:
+  info:
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+
+info:
+  app:
+    name: MasterAnnonce
+    description: API REST MasterAnnonce (test)
+    version: test
