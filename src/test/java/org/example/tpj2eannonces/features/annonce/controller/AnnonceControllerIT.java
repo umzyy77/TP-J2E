@@ -109,6 +109,18 @@ class AnnonceControllerIT {
                             .with(jwt("ROLE_ADMIN")))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        void shouldReturn403WhenRoleInsufficient() throws Exception {
+            when(annonceService.archive(anyLong(), any()))
+                    .thenThrow(new org.springframework.security.access.AccessDeniedException("Access Denied"));
+
+            mockMvc.perform(patch("/api/annonces/7")
+                            .with(jwt("ROLE_USER"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"action\":\"archive\"}"))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     // ==== 2e. CRUD complet ====

@@ -47,8 +47,6 @@ public class SecurityContextFacade {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return false;
-        } else {
-            authentication.getAuthorities();
         }
 
         Set<String> normalizedExpectedAuthorities = Arrays.stream(expectedAuthorities)
