@@ -3,6 +3,7 @@ package org.example.tpj2eannonces.core.web.exception;
 import java.util.List;
 
 import org.example.tpj2eannonces.core.web.dto.ApiErrorDTO;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -28,6 +29,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiErrorDTO.of("CONFLICT", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidDataAccess(InvalidDataAccessApiUsageException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorDTO.of("BAD_REQUEST", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

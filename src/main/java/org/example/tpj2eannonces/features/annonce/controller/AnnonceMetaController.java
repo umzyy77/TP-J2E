@@ -11,8 +11,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/meta/annonces")
+@Tag(name = "Meta", description = "Metadonnees des annonces (champs triables, filtrables, recherchables)")
 public class AnnonceMetaController {
 
     private static final List<String> SORTABLE_FIELDS = buildSortableFields();
@@ -20,6 +25,8 @@ public class AnnonceMetaController {
     private static final List<String> SEARCHABLE_STRING_FIELDS = buildSearchableStringFields();
 
     @GetMapping
+    @Operation(summary = "Metadonnees des annonces", description = "Retourne les champs triables, filtrables et recherchables")
+    @ApiResponse(responseCode = "200", description = "Metadonnees retournees")
     public ResponseEntity<Map<String, Object>> getMetadata() {
         return ResponseEntity.ok(Map.of(
                 "sortableFields", SORTABLE_FIELDS,
