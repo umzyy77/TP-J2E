@@ -3,15 +3,22 @@ package org.example.tpj2eannonces.core.web.exception;
 import java.util.List;
 
 import org.example.tpj2eannonces.core.web.dto.ApiErrorDTO;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiBusinessException.class)
     public ResponseEntity<ApiErrorDTO> handleBusinessException(ApiBusinessException ex) {
@@ -31,10 +38,22 @@ public class GlobalExceptionHandler {
                 .body(ApiErrorDTO.of("CONFLICT", ex.getMessage()));
     }
 
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ResponseEntity<ApiErrorDTO> handleInvalidDataAccess(InvalidDataAccessApiUsageException ex) {
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiErrorDTO> handleDataAccess(DataAccessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiErrorDTO.of("BAD_REQUEST", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorDTO.of("BAD_REQUEST", "Parametre invalide: " + ex.getName()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorDTO> handleMessageNotReadable(HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorDTO.of("BAD_REQUEST", "Corps de la requete manquant ou invalide"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -44,5 +63,17 @@ public class GlobalExceptionHandler {
                 .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiErrorDTO.of("VALIDATION_ERROR", errors));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public void handleAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
+        throw ex;
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorDTO> handleUnexpected(Exception ex) {
+        log.error("Erreur inattendue", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiErrorDTO.of("INTERNAL_ERROR", "Erreur interne du serveur"));
     }
 }

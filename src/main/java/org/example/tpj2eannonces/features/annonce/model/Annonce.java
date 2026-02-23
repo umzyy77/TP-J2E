@@ -70,7 +70,7 @@ public class Annonce extends BaseEntity<Long> implements OwnableByUser {
 
     @Version
     @Column(name = "version")
-    private Long version;
+    private Long version = 0L;
 
     @NotNull(message = "L'auteur est obligatoire")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
