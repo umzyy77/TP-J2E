@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+.claude
+target
+docs
+fichier-md-prog-java-2e
+postman
+.postman
+*.iml
+*.log
+.env

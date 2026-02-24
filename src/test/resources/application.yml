@@ -1,0 +1,45 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+jwt:
+  secret: TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!
+  expiration: 3600000
+  refresh-secret: TestRefreshSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!!
+  refresh-expiration: 604800000
+
+rate-limit:
+  login:
+    enabled: true
+    path: /api/auth/login
+    max-requests: 1000
+    window-seconds: 60
+
+management:
+  info:
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+
+info:
+  app:
+    name: MasterAnnonce
+    description: API REST MasterAnnonce (test)
+    version: test
