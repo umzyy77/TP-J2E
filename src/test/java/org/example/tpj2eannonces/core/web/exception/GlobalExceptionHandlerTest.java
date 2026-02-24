@@ -27,6 +27,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleBusinessException(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("NOT_FOUND");
         assertThat(response.getBody().messages()).containsExactly("not found");
     }
@@ -38,6 +39,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleBusinessException(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("FORBIDDEN");
     }
 
@@ -48,6 +50,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleIllegalArgument(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("BAD_REQUEST");
         assertThat(response.getBody().messages()).containsExactly("bad arg");
     }
@@ -59,6 +62,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleIllegalState(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("CONFLICT");
         assertThat(response.getBody().messages()).containsExactly("conflict");
     }
@@ -70,6 +74,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleUnexpected(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("INTERNAL_ERROR");
         assertThat(response.getBody().messages()).containsExactly("Erreur interne du serveur");
     }
@@ -86,6 +91,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorDTO> response = handler.handleValidation(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assert response.getBody() != null;
         assertThat(response.getBody().error()).isEqualTo("VALIDATION_ERROR");
         assertThat(response.getBody().messages()).containsExactly("title: must not be blank");
     }

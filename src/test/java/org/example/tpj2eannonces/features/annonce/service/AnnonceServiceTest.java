@@ -58,8 +58,8 @@ class AnnonceServiceTest {
 
     @Test
     void findById_shouldReturnDto_whenExists() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
-        AnnonceResponseDTO dto = responseDto(1L);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
+        AnnonceResponseDTO dto = responseDto();
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(annonceMapper.toResponseDTO(annonce)).thenReturn(dto);
 
@@ -81,10 +81,10 @@ class AnnonceServiceTest {
     @Test
     void findAll_shouldReturnPage() {
         Pageable pageable = PageRequest.of(0, 10);
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         Page<Annonce> page = new PageImpl<>(List.of(annonce), pageable, 1);
         when(annonceRepository.findAll(pageable)).thenReturn(page);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         Page<AnnonceResponseDTO> result = annonceService.findAll(pageable);
 
@@ -100,13 +100,13 @@ class AnnonceServiceTest {
         user.setId(OWNER_ID);
         Category category = new Category();
         category.setId(1L);
-        Annonce entity = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce entity = annonce(AnnonceStatus.DRAFT);
 
         when(userService.getById(OWNER_ID)).thenReturn(user);
         when(categoryService.getById(1L)).thenReturn(category);
         when(annonceMapper.toEntity(form)).thenReturn(entity);
         when(annonceRepository.save(entity)).thenReturn(entity);
-        when(annonceMapper.toResponseDTO(entity)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(entity)).thenReturn(responseDto());
 
         AnnonceResponseDTO result = annonceService.create(form, OWNER_ID);
 
@@ -119,7 +119,7 @@ class AnnonceServiceTest {
     @Test
     void update_shouldThrow_whenNotOwner() {
         AnnonceFormDTO form = form();
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.update(1L, form, OTHER_ID))
@@ -129,7 +129,7 @@ class AnnonceServiceTest {
     @Test
     void update_shouldThrow_whenPublished() {
         AnnonceFormDTO form = form();
-        Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
+        Annonce annonce = annonce(AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.update(1L, form, OWNER_ID))
@@ -140,7 +140,7 @@ class AnnonceServiceTest {
 
     @Test
     void delete_shouldThrow_whenNotArchived() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.delete(1L, OWNER_ID))
@@ -149,7 +149,7 @@ class AnnonceServiceTest {
 
     @Test
     void delete_shouldSucceed_whenArchivedAndOwner() {
-        Annonce annonce = annonce(1L, AnnonceStatus.ARCHIVED);
+        Annonce annonce = annonce(AnnonceStatus.ARCHIVED);
         when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
         annonceService.delete(1L, OWNER_ID);
@@ -161,11 +161,11 @@ class AnnonceServiceTest {
 
     @Test
     void update_shouldSucceed_whenDraftAndOwner_sameCategory() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         AnnonceFormDTO form = form();
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(annonceRepository.save(annonce)).thenReturn(annonce);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         AnnonceResponseDTO result = annonceService.update(1L, form, OWNER_ID);
 
@@ -175,7 +175,7 @@ class AnnonceServiceTest {
 
     @Test
     void update_shouldChangeCategory_whenDifferentCategoryId() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         AnnonceFormDTO form = new AnnonceFormDTO("Titre", "Desc", "Adresse", "m@m.com", 99L);
         Category newCat = new Category();
         newCat.setId(99L);
@@ -183,7 +183,7 @@ class AnnonceServiceTest {
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(categoryService.getById(99L)).thenReturn(newCat);
         when(annonceRepository.save(annonce)).thenReturn(annonce);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         annonceService.update(1L, form, OWNER_ID);
 
@@ -201,7 +201,7 @@ class AnnonceServiceTest {
 
     @Test
     void update_shouldThrow_whenNewCategoryNotFound() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         AnnonceFormDTO form = new AnnonceFormDTO("Titre", "Desc", "Adresse", "m@m.com", 99L);
 
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
@@ -218,10 +218,10 @@ class AnnonceServiceTest {
     @Test
     void search_shouldReturnPage() {
         Pageable pageable = PageRequest.of(0, 10);
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         Page<Annonce> page = new PageImpl<>(List.of(annonce), pageable, 1);
         when(annonceRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         Page<AnnonceResponseDTO> result = annonceService.search(
                 "keyword", AnnonceStatus.DRAFT, 1L, OWNER_ID,
@@ -234,7 +234,7 @@ class AnnonceServiceTest {
 
     @Test
     void changeStatus_shouldThrow_whenActionUnknown() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.changeStatus(1L, "invalid", OWNER_ID))
@@ -243,10 +243,10 @@ class AnnonceServiceTest {
 
     @Test
     void changeStatus_shouldSucceed_whenValidTransition() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(annonceRepository.save(annonce)).thenReturn(annonce);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         AnnonceResponseDTO result = annonceService.changeStatus(1L, "publish", OWNER_ID);
 
@@ -256,7 +256,7 @@ class AnnonceServiceTest {
 
     @Test
     void changeStatus_shouldThrow_whenInvalidTransition() {
-        Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
+        Annonce annonce = annonce(AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.changeStatus(1L, "publish", OWNER_ID))
@@ -265,7 +265,7 @@ class AnnonceServiceTest {
 
     @Test
     void changeStatus_shouldThrow_whenNotOwner() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.changeStatus(1L, "publish", OTHER_ID))
@@ -284,10 +284,10 @@ class AnnonceServiceTest {
 
     @Test
     void archive_shouldSucceed_whenPublishedAndOwner() {
-        Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
+        Annonce annonce = annonce(AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(annonceRepository.save(annonce)).thenReturn(annonce);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         AnnonceResponseDTO result = annonceService.archive(1L, OWNER_ID);
 
@@ -297,7 +297,7 @@ class AnnonceServiceTest {
 
     @Test
     void archive_shouldThrow_whenNotPublished() {
-        Annonce annonce = annonce(1L, AnnonceStatus.DRAFT);
+        Annonce annonce = annonce(AnnonceStatus.DRAFT);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.archive(1L, OWNER_ID))
@@ -306,10 +306,10 @@ class AnnonceServiceTest {
 
     @Test
     void archive_shouldSucceed_whenPublished_evenIfCurrentUserIsNotOwner() {
-        Annonce annonce = annonce(1L, AnnonceStatus.PUBLISHED);
+        Annonce annonce = annonce(AnnonceStatus.PUBLISHED);
         when(annonceRepository.findWithRelationsById(1L)).thenReturn(Optional.of(annonce));
         when(annonceRepository.save(annonce)).thenReturn(annonce);
-        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto(1L));
+        when(annonceMapper.toResponseDTO(annonce)).thenReturn(responseDto());
 
         AnnonceResponseDTO result = annonceService.archive(1L, OTHER_ID);
 
@@ -354,7 +354,7 @@ class AnnonceServiceTest {
 
     @Test
     void delete_shouldThrow_whenNotOwner() {
-        Annonce annonce = annonce(1L, AnnonceStatus.ARCHIVED);
+        Annonce annonce = annonce(AnnonceStatus.ARCHIVED);
         when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.delete(1L, OTHER_ID))
@@ -363,7 +363,7 @@ class AnnonceServiceTest {
 
     @Test
     void delete_shouldThrow_whenNullUserId() {
-        Annonce annonce = annonce(1L, AnnonceStatus.ARCHIVED);
+        Annonce annonce = annonce(AnnonceStatus.ARCHIVED);
         when(annonceRepository.findById(1L)).thenReturn(Optional.of(annonce));
 
         assertThatThrownBy(() -> annonceService.delete(1L, null))
@@ -372,10 +372,10 @@ class AnnonceServiceTest {
 
     // ---- Helpers ----
 
-    private Annonce annonce(Long id, AnnonceStatus status) {
+    private Annonce annonce(AnnonceStatus status) {
         Annonce a = new Annonce();
-        a.setId(id);
-        a.setTitle("Titre " + id);
+        a.setId(1L);
+        a.setTitle("Titre " + (Long) 1L);
         a.setDescription("Desc");
         a.setAdress("Adresse");
         a.setMail("test@test.com");
@@ -397,9 +397,9 @@ class AnnonceServiceTest {
         return new AnnonceFormDTO("Titre", "Description", "10 rue de Paris", "contact@example.com", 1L);
     }
 
-    private static AnnonceResponseDTO responseDto(Long id) {
+    private static AnnonceResponseDTO responseDto() {
         return new AnnonceResponseDTO(
-                id, "Titre " + id, "Desc", "Adresse", "test@test.com",
+                1L, "Titre " + (Long) 1L, "Desc", "Adresse", "test@test.com",
                 LocalDateTime.of(2026, 2, 20, 10, 30), "DRAFT",
                 new AnnonceResponseDTO.AuthorDTO(OWNER_ID, "alice"),
                 new AnnonceResponseDTO.CategoryDTO(1L, "Immobilier"));

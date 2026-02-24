@@ -55,7 +55,7 @@ class AuthControllerHardeningIT {
         roleRepository.deleteAll();
 
         Role userRole = roleRepository.save(new Role("ROLE_USER"));
-        buildUser("owner", "owner@example.com", userRole);
+        buildUser(userRole);
     }
 
     @Test
@@ -196,13 +196,13 @@ class AuthControllerHardeningIT {
         return req;
     }
 
-    private User buildUser(String username, String email, Role role) {
+    private void buildUser(Role role) {
         User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
+        user.setUsername("owner");
+        user.setEmail("owner@example.com");
         user.setPassword(passwordEncoder.encode("password123"));
         user.setRole(role);
-        return userRepository.save(user);
+        userRepository.save(user);
     }
 
     private void assertAllNo5xx(List<RequestCase> cases) throws Exception {

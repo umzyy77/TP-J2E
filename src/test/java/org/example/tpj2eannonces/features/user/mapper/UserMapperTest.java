@@ -68,6 +68,6 @@ class UserMapperTest {
 
     @Test
     void mapRole_shouldReturnNull_whenNull() {
-        assertThat(mapper.map((Role) null)).isNull();
+        assertThat(mapper.map(null)).isNull();
     }
 }

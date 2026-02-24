@@ -66,7 +66,6 @@ class AnnonceControllerHardeningIT {
     private String adminToken;
 
     private User owner;
-    private User otherUser;
     private Category category;
 
     private Annonce draftAnnonce;
@@ -94,7 +93,7 @@ class AnnonceControllerHardeningIT {
         category = categoryRepository.save(new Category("Immobilier"));
 
         owner = buildUser("owner", "owner@example.com", userRole);
-        otherUser = buildUser("other", "other@example.com", userRole);
+        User otherUser = buildUser("other", "other@example.com", userRole);
         User admin = buildUser("admin", "admin@example.com", adminRole);
 
         ownerToken = tokenFor(owner);
