@@ -12,6 +12,15 @@ spring:
 jwt:
   secret: TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!
   expiration: 3600000
+  refresh-secret: TestRefreshSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!!
+  refresh-expiration: 604800000
+
+rate-limit:
+  login:
+    enabled: true
+    path: /api/auth/login
+    max-requests: 1000
+    window-seconds: 60
 
 management:
   info:

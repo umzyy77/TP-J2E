@@ -45,13 +45,18 @@ class AuthServiceTest {
         when(userService.findWithRoleByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordService.matches("secret", user.getPassword())).thenReturn(true);
         when(jwtService.generateToken(any(UUID.class), eq("alice"), anyCollection(), anyCollection()))
-                .thenReturn("jwt-token");
+                .thenReturn("jwt-access-token");
+        when(jwtService.generateRefreshToken(any(UUID.class), eq("alice")))
+                .thenReturn("jwt-refresh-token");
         when(jwtService.getExpirationMs()).thenReturn(3600000L);
+        when(jwtService.getRefreshExpirationMs()).thenReturn(604800000L);
 
         LoginResponseDTO result = authService.login(new LoginDTO("alice", "secret"));
 
-        assertThat(result.token()).isEqualTo("jwt-token");
+        assertThat(result.token()).isEqualTo("jwt-access-token");
         assertThat(result.expiresIn()).isEqualTo(3600L);
+        assertThat(result.refreshToken()).isEqualTo("jwt-refresh-token");
+        assertThat(result.refreshExpiresIn()).isEqualTo(604800L);
     }
 
     @Test
@@ -82,6 +87,49 @@ class AuthServiceTest {
         when(passwordService.matches(anyString(), anyString())).thenReturn(true);
 
         assertThatThrownBy(() -> authService.login(loginDTO))
+                .isInstanceOf(AuthUnauthorizedException.class);
+    }
+
+    @Test
+    void refresh_shouldReturnNewTokens_whenRefreshTokenIsValid() {
+        User user = userWithRole();
+        String refreshToken = "refresh-token";
+
+        when(jwtService.validateRefreshToken(refreshToken)).thenReturn(true);
+        when(jwtService.extractUserIdFromRefreshToken(refreshToken)).thenReturn(user.getId());
+        when(userService.findById(user.getId())).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(any(UUID.class), eq("alice"), anyCollection(), anyCollection()))
+                .thenReturn("new-access-token");
+        when(jwtService.generateRefreshToken(any(UUID.class), eq("alice")))
+                .thenReturn("new-refresh-token");
+        when(jwtService.getExpirationMs()).thenReturn(3600000L);
+        when(jwtService.getRefreshExpirationMs()).thenReturn(604800000L);
+
+        LoginResponseDTO result = authService.refresh(refreshToken);
+
+        assertThat(result.token()).isEqualTo("new-access-token");
+        assertThat(result.expiresIn()).isEqualTo(3600L);
+        assertThat(result.refreshToken()).isEqualTo("new-refresh-token");
+        assertThat(result.refreshExpiresIn()).isEqualTo(604800L);
+    }
+
+    @Test
+    void refresh_shouldThrow_whenRefreshTokenIsInvalid() {
+        when(jwtService.validateRefreshToken("bad-token")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.refresh("bad-token"))
+                .isInstanceOf(AuthUnauthorizedException.class);
+    }
+
+    @Test
+    void refresh_shouldThrow_whenUserNotFound() {
+        UUID userId = UUID.randomUUID();
+
+        when(jwtService.validateRefreshToken("refresh-token")).thenReturn(true);
+        when(jwtService.extractUserIdFromRefreshToken("refresh-token")).thenReturn(userId);
+        when(userService.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("refresh-token"))
                 .isInstanceOf(AuthUnauthorizedException.class);
     }
 

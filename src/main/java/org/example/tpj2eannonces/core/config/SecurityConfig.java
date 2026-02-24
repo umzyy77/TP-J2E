@@ -1,5 +1,6 @@
 package org.example.tpj2eannonces.core.config;
 
+import org.example.tpj2eannonces.core.filter.LoginRateLimitFilter;
 import org.example.tpj2eannonces.core.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,9 +22,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          LoginRateLimitFilter loginRateLimitFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.loginRateLimitFilter = loginRateLimitFilter;
     }
 
     @Bean
@@ -36,6 +40,7 @@ public class SecurityConfig {
                             .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers("/api/auth/login").permitAll()
+                            .requestMatchers("/api/auth/refresh").permitAll()
                             .requestMatchers("/actuator/**").permitAll()
                             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                             .requestMatchers("/api/**").authenticated()
@@ -54,6 +59,7 @@ public class SecurityConfig {
                                 response.getWriter().write(
                                         "{\"error\":\"FORBIDDEN\",\"messages\":[\"Acces refuse : role insuffisant\"]}");
                             }))
+                    .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                     .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
             return http.build();

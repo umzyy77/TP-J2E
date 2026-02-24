@@ -15,6 +15,7 @@ API REST Spring Boot (JWT, JPA, Actuator) avec outillage DevOps pour execution l
 - Spring Security + JWT
 - Spring Data JPA + PostgreSQL
 - Spring Actuator
+- Rate limiting (login)
 - JUnit 5, Mockito, Testcontainers
 - Docker / Docker Compose
 - JaCoCo + Sonar (configuration dans `sonar-project.properties`)
@@ -39,6 +40,7 @@ mvn spring-boot:run
 - Swagger UI: `http://localhost:8080/swagger-ui`
 - Health: `http://localhost:8080/actuator/health`
 - Info: `http://localhost:8080/actuator/info`
+- Auth refresh: `POST http://localhost:8080/api/auth/refresh`
 
 ## Demarrage full Docker (app + postgres)
 
@@ -146,7 +148,7 @@ Etapes executees:
 - Build + tests + packaging: `mvn -B clean verify` (aucun skip)
 - Publication artifact JAR nomme `master-annonce-jar`
 - Publication artifact JaCoCo (`jacoco-report`)
-- Build Docker sur `main`/tag + publication artifact image (`master-annonce-docker-image`)
+- Build Docker automatique sur chaque `push`/`pull_request` + publication artifact image (`master-annonce-docker-image`)
 
 Strategie DB en CI (choix demande):
 
@@ -176,8 +178,16 @@ Solution: pipeline alignee sur Java 25 pour rester coherent avec le code source 
 2. Les tests d'integration ont besoin d'une base PostgreSQL.
 Solution: Testcontainers est utilise pour eviter une configuration manuelle d'un service DB dans le workflow.
 
-3. Le build Docker ne doit pas ralentir toutes les branches.
-Solution: job Docker limite aux `push` sur `main` (ou tag), tout en gardant les tests sur tous les push/PR.
+3. Le pipeline Docker doit etre automatique pour chaque branche.
+Solution: job Docker execute sur tous les `push` et `pull_request`, sans etape manuelle.
+
+## Bonus implementes
+
+- Refresh token JWT (secret/expiration dedies)
+- Endpoint `POST /api/auth/refresh`
+- Rate limiting sur `POST /api/auth/login` (HTTP 429 + header `Retry-After`)
+- Couverture de tests > 80% (JaCoCo)
+- Pipeline Docker automatique en CI
 
 ## Sonar
 

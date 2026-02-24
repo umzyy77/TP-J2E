@@ -11,14 +11,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtServiceTest {
 
-    private static final String SECRET = "TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!";
-    private static final long EXPIRATION = 3600000L;
+    private static final String ACCESS_SECRET = "TestSecretKeyForJWTSigningMustBeAtLeast256BitsLongForTests!!";
+    private static final String REFRESH_SECRET = "TestRefreshSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!!";
+    private static final long ACCESS_EXPIRATION = 3600000L;
+    private static final long REFRESH_EXPIRATION = 604800000L;
 
     private JwtService jwtService;
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(SECRET, EXPIRATION);
+        jwtService = new JwtService(ACCESS_SECRET, ACCESS_EXPIRATION, REFRESH_SECRET, REFRESH_EXPIRATION);
     }
 
     @Test
@@ -53,7 +55,12 @@ class JwtServiceTest {
 
     @Test
     void getExpirationMs_shouldReturnConfiguredValue() {
-        assertThat(jwtService.getExpirationMs()).isEqualTo(EXPIRATION);
+        assertThat(jwtService.getExpirationMs()).isEqualTo(ACCESS_EXPIRATION);
+    }
+
+    @Test
+    void getRefreshExpirationMs_shouldReturnConfiguredValue() {
+        assertThat(jwtService.getRefreshExpirationMs()).isEqualTo(REFRESH_EXPIRATION);
     }
 
     @Test
@@ -83,5 +90,31 @@ class JwtServiceTest {
 
         assertThat(token).isNotBlank();
         assertThat(jwtService.validateToken(token)).isTrue();
+    }
+
+    @Test
+    void generateRefreshToken_shouldProduceValidRefreshToken() {
+        UUID userId = UUID.randomUUID();
+        String refreshToken = jwtService.generateRefreshToken(userId, "alice");
+
+        assertThat(refreshToken).isNotBlank();
+        assertThat(jwtService.validateRefreshToken(refreshToken)).isTrue();
+        assertThat(jwtService.extractUserIdFromRefreshToken(refreshToken)).isEqualTo(userId);
+    }
+
+    @Test
+    void validateToken_shouldRejectRefreshToken() {
+        UUID userId = UUID.randomUUID();
+        String refreshToken = jwtService.generateRefreshToken(userId, "alice");
+
+        assertThat(jwtService.validateToken(refreshToken)).isFalse();
+    }
+
+    @Test
+    void validateRefreshToken_shouldRejectAccessToken() {
+        UUID userId = UUID.randomUUID();
+        String accessToken = jwtService.generateToken(userId, "alice", Set.of("ROLE_USER"), Set.of("ROLE_USER"));
+
+        assertThat(jwtService.validateRefreshToken(accessToken)).isFalse();
     }
 }

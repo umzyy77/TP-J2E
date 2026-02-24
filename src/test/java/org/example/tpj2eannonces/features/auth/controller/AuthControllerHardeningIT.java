@@ -122,8 +122,74 @@ class AuthControllerHardeningIT {
         assertAllNo5xx(requests);
     }
 
+    @Test
+    void refreshShouldNotReturn5xxForMalformedInputs() throws Exception {
+        List<RequestCase> cases = List.of(
+                new RequestCase("empty body", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("")),
+                new RequestCase("empty object", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")),
+                new RequestCase("null refresh token", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":null}")),
+                new RequestCase("wrong type", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":123}")),
+                new RequestCase("malformed json", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"abc\"")),
+                new RequestCase("invalid token value", post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"not-a-jwt\"}")),
+                new RequestCase("missing content type", post("/api/auth/refresh")
+                        .content("{\"refreshToken\":\"not-a-jwt\"}"))
+        );
+
+        assertAllNo5xx(cases);
+    }
+
+    @Test
+    void randomRefreshFuzzShouldNeverReturn5xx() throws Exception {
+        Random random = new Random(20260224L);
+        List<RequestCase> requests = new ArrayList<>();
+
+        String[] refreshBodies = {
+                "",
+                "{}",
+                "{\"refreshToken\":\"not-a-jwt\"}",
+                "{\"refreshToken\":null}",
+                "{\"refreshToken\":123}",
+                "{\"refreshToken\":\"abc\"",
+                "{\"refreshToken\":[1,2,3]}"
+        };
+        String[] contentTypes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.TEXT_PLAIN_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                null
+        };
+
+        for (int i = 0; i < 80; i++) {
+            String body = refreshBodies[random.nextInt(refreshBodies.length)];
+            String contentType = contentTypes[random.nextInt(contentTypes.length)];
+            requests.add(new RequestCase("refresh-fuzz-" + i, refreshRequest(body, contentType)));
+        }
+
+        assertAllNo5xx(requests);
+    }
+
     private MockHttpServletRequestBuilder loginRequest(String body, String contentType) {
         MockHttpServletRequestBuilder req = post("/api/auth/login").content(body);
+        if (contentType != null) {
+            req = req.contentType(contentType);
+        }
+        return req;
+    }
+
+    private MockHttpServletRequestBuilder refreshRequest(String body, String contentType) {
+        MockHttpServletRequestBuilder req = post("/api/auth/refresh").content(body);
         if (contentType != null) {
             req = req.contentType(contentType);
         }

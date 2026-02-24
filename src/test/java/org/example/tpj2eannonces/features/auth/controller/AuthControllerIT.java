@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.tpj2eannonces.TestcontainersConfig;
 import org.example.tpj2eannonces.features.auth.dto.LoginDTO;
 import org.example.tpj2eannonces.features.auth.dto.LoginResponseDTO;
+import org.example.tpj2eannonces.features.auth.dto.RefreshTokenRequestDTO;
 import org.example.tpj2eannonces.features.auth.exception.AuthUnauthorizedException;
 import org.example.tpj2eannonces.features.auth.service.AuthService;
 import org.junit.jupiter.api.Test;
@@ -41,14 +42,17 @@ class AuthControllerIT {
     @Test
     void shouldLoginSuccessfully() throws Exception {
         LoginDTO request = new LoginDTO("alice", "secret");
-        when(authService.login(request)).thenReturn(new LoginResponseDTO("jwt-token", 3600L));
+        when(authService.login(request))
+                .thenReturn(new LoginResponseDTO("jwt-token", 3600L, "refresh-token", 604800L));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token"))
-                .andExpect(jsonPath("$.expiresIn").value(3600));
+                .andExpect(jsonPath("$.expiresIn").value(3600))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(jsonPath("$.refreshExpiresIn").value(604800));
 
         verify(authService).login(request);
     }
@@ -79,11 +83,46 @@ class AuthControllerIT {
     @Test
     void shouldBeAccessibleWithoutAuthentication() throws Exception {
         when(authService.login(any(LoginDTO.class)))
-                .thenReturn(new LoginResponseDTO("token", 3600L));
+                .thenReturn(new LoginResponseDTO("token", 3600L, "refresh-token", 604800L));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginDTO("user", "pass"))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRefreshSuccessfully() throws Exception {
+        RefreshTokenRequestDTO request = new RefreshTokenRequestDTO("refresh-token");
+        when(authService.refresh("refresh-token"))
+                .thenReturn(new LoginResponseDTO("new-access", 3600L, "new-refresh", 604800L));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("new-access"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenRefreshTokenIsInvalid() throws Exception {
+        when(authService.refresh(any(String.class)))
+                .thenThrow(new AuthUnauthorizedException("Refresh token invalide"));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"bad\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenRefreshPayloadIsInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
     }
 }

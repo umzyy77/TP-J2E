@@ -1,6 +1,7 @@
 package org.example.tpj2eannonces.features.auth.service;
 
 import java.util.Set;
+import java.util.UUID;
 
 import org.example.tpj2eannonces.core.security.JwtService;
 import org.example.tpj2eannonces.core.security.PasswordService;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS_MESSAGE = "Identifiants invalides";
+    private static final String INVALID_REFRESH_TOKEN_MESSAGE = "Refresh token invalide";
     private static final String MISSING_ROLE_MESSAGE = "Aucun role attribue a l'utilisateur";
 
     private final UserService userService;
@@ -42,9 +44,41 @@ public class AuthService {
         if (roles.isEmpty()) {
             throw new AuthUnauthorizedException(MISSING_ROLE_MESSAGE);
         }
-        String token = jwtService.generateToken(user.getId(), user.getUsername(), roles, authorities);
+        String accessToken = jwtService.generateToken(user.getId(), user.getUsername(), roles, authorities);
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername());
 
-        long expiresIn = jwtService.getExpirationMs() / 1000;
-        return new LoginResponseDTO(token, expiresIn);
+        long accessExpiresIn = jwtService.getExpirationMs() / 1000;
+        long refreshExpiresIn = jwtService.getRefreshExpirationMs() / 1000;
+        return new LoginResponseDTO(accessToken, accessExpiresIn, refreshToken, refreshExpiresIn);
+    }
+
+    public LoginResponseDTO refresh(String refreshToken) {
+        if (!jwtService.validateRefreshToken(refreshToken)) {
+            throw new AuthUnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
+        }
+
+        UUID userId;
+        try {
+            userId = jwtService.extractUserIdFromRefreshToken(refreshToken);
+        } catch (IllegalArgumentException _) {
+            throw new AuthUnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
+        }
+
+        User user = userService.findById(userId)
+                .orElseThrow(() -> new AuthUnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE));
+
+        Set<String> roles = user.resolveRoleNames();
+        Set<String> authorities = user.resolveAuthorities();
+        if (roles.isEmpty()) {
+            throw new AuthUnauthorizedException(MISSING_ROLE_MESSAGE);
+        }
+
+        String newAccessToken = jwtService.generateToken(user.getId(), user.getUsername(), roles, authorities);
+        String newRefreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername());
+
+        long accessExpiresIn = jwtService.getExpirationMs() / 1000;
+        long refreshExpiresIn = jwtService.getRefreshExpirationMs() / 1000;
+
+        return new LoginResponseDTO(newAccessToken, accessExpiresIn, newRefreshToken, refreshExpiresIn);
     }
 }

@@ -85,6 +85,7 @@ Note: ce TP4 est volontairement realise en Java 25 pour rester a jour.
 | Verbe | URI | Description |
 |-------|-----|-------------|
 | POST | /api/auth/login | Login, retourne un JWT |
+| POST | /api/auth/refresh | Rafraichit access token + refresh token |
 
 ### Meta (introspection)
 
@@ -94,9 +95,11 @@ Note: ce TP4 est volontairement realise en Java 25 pour rester a jour.
 
 ## Securite
 
-- **JWT** signe HMAC, contient userId + username + role + expiration (24h)
+- **Access JWT** signe HMAC, contient userId + username + role + expiration
+- **Refresh JWT** dedie (secret + expiration differents)
 - **Stateless** : pas de session HTTP
-- **Endpoints publics** : /api/auth/login, /actuator/**
+- **Rate limiting** : protection brute-force sur `POST /api/auth/login` (HTTP 429)
+- **Endpoints publics** : /api/auth/login, /api/auth/refresh, /actuator/**
 - **Endpoints proteges** : /api/**
 - **Regles metier** :
   - Seul l'auteur peut modifier/supprimer son annonce
@@ -168,3 +171,10 @@ Arreter et nettoyer:
 ```bash
 docker compose down -v
 ```
+
+## Bonus
+
+- Refresh token implemente (`POST /api/auth/refresh`)
+- Rate limiting login implemente (`429 TOO_MANY_REQUESTS` + `Retry-After`)
+- Couverture de tests > 80% (JaCoCo)
+- Pipeline Docker automatique dans GitHub Actions

@@ -3,6 +3,7 @@ package org.example.tpj2eannonces.features.auth.controller;
 import org.example.tpj2eannonces.core.web.dto.ApiErrorDTO;
 import org.example.tpj2eannonces.features.auth.dto.LoginDTO;
 import org.example.tpj2eannonces.features.auth.dto.LoginResponseDTO;
+import org.example.tpj2eannonces.features.auth.dto.RefreshTokenRequestDTO;
 import org.example.tpj2eannonces.features.auth.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,7 +34,8 @@ public class AuthController {
     @Operation(summary = "Connexion", description = "Authentifie un utilisateur et retourne un token JWT")
     @ApiResponse(responseCode = "200", description = "Connexion reussie",
             content = @Content(schema = @Schema(implementation = LoginResponseDTO.class),
-                    examples = @ExampleObject(value = "{\"token\": \"eyJhbGciOiJIUzI1NiJ9...\", \"expiresIn\": 3600000}")))
+                    examples = @ExampleObject(
+                            value = "{\"token\":\"eyJhbGciOiJIUzI1NiJ9...\",\"expiresIn\":86400,\"refreshToken\":\"eyJhbGciOiJIUzI1NiJ9...\",\"refreshExpiresIn\":604800}")))
     @ApiResponse(responseCode = "401", description = "Identifiants invalides",
             content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
                     examples = @ExampleObject(value = "{\"error\": \"UNAUTHORIZED\", \"messages\": [\"Identifiants invalides\"]}")))
@@ -43,5 +45,21 @@ public class AuthController {
                             value = "{\"error\": \"VALIDATION_ERROR\", \"messages\": [\"username: Le nom d'utilisateur est requis\"]}")))
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginDTO dto) {
         return ResponseEntity.ok(authService.login(dto));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Rafraichir les tokens", description = "Valide un refresh token et retourne une nouvelle paire de tokens")
+    @ApiResponse(responseCode = "200", description = "Rafraichissement reussi",
+            content = @Content(schema = @Schema(implementation = LoginResponseDTO.class)))
+    @ApiResponse(responseCode = "401", description = "Refresh token invalide",
+            content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"UNAUTHORIZED\", \"messages\": [\"Refresh token invalide\"]}")))
+    @ApiResponse(responseCode = "400", description = "Donnees invalides",
+            content = @Content(schema = @Schema(implementation = ApiErrorDTO.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"VALIDATION_ERROR\", \"messages\": [\"refreshToken: Le refresh token est requis\"]}")))
+    public ResponseEntity<LoginResponseDTO> refresh(@Valid @RequestBody RefreshTokenRequestDTO dto) {
+        return ResponseEntity.ok(authService.refresh(dto.refreshToken()));
     }
 }

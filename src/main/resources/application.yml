@@ -32,6 +32,15 @@ springdoc:
 jwt:
   secret: MasterAnnonceSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!
   expiration: 86400000
+  refresh-secret: MasterAnnonceRefreshSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!
+  refresh-expiration: 604800000
+
+rate-limit:
+  login:
+    enabled: true
+    path: /api/auth/login
+    max-requests: 20
+    window-seconds: 60
 
 management:
   info:
