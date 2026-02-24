@@ -172,7 +172,7 @@ Artifacts produits:
 
 Preuve du workflow vert:
 
-- Lien du dernier run GitHub Actions: a renseigner apres premier push sur GitHub.
+- Lien du dernier run GitHub Actions: [![CI](https://github.com/umzyy77/TP-J2E/actions/workflows/ci.yml/badge.svg)](https://github.com/umzyy77/TP-J2E/actions/workflows/ci.yml)
 
 Commande cible pour CI:
 
