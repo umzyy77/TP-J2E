@@ -137,6 +137,14 @@ Note: ce TP4 est volontairement realise en Java 25 pour rester a jour.
 - **Choix** : `AnnonceFormDTO` unique au lieu de `AnnonceCreateDTO` + `AnnonceUpdateDTO`
 - **Raison** : memes champs, le TP ne demande pas de separation
 
+### 5. new LoginResponseDTO dans AuthService (cas exceptionnel justifie)
+- **Probleme** : le TP interdit `new DTO()` dans les services (sauf cas exceptionnel justifie)
+- **Justification** : `LoginResponseDTO` est un record construit a partir de valeurs calculees (tokens JWT generes + expiration). Il n'y a pas d'entite source a mapper, donc MapStruct n'a pas de sens ici. C'est le cas exceptionnel prevu par le TP.
+
+### 6. Spring Boot 4.0.2 au lieu de 3.5.5
+- **Probleme** : le TP demande Spring Boot Parent 3.5.5
+- **Justification** : le projet utilise Java 25, qui necessite Spring Boot 4.x pour la compatibilite. Spring Boot 3.x ne supporte pas Java 25. Toutes les fonctionnalites demandees sont identiques.
+
 ## Lancement
 
 ```bash
@@ -182,9 +190,87 @@ Arreter et nettoyer:
 docker compose down -v
 ```
 
+## Collection Postman
+
+Fichier : `MasterAnnonce.postman_collection.json` a la racine du projet.
+
+Import dans Postman via **Import > Upload File**. La collection contient :
+- Auth (login, refresh, login invalide)
+- CRUD annonces (list, search, get, create, update, publish, archive, delete)
+- Meta (introspection)
+- Actuator (health, info)
+- Tests securite (401 sans token, 401 token invalide)
+
+Variables pre-configurees : `baseUrl`, `accessToken`, `refreshToken`. Lancer "Login" en premier pour remplir automatiquement les tokens.
+
 ## Bonus
 
 - Refresh token implemente (`POST /api/auth/refresh`)
 - Rate limiting login implemente (`429 TOO_MANY_REQUESTS` + `Retry-After`)
 - Couverture de tests > 80% (JaCoCo)
 - Pipeline Docker automatique dans GitHub Actions
+
+## SuperBonus - Deploiement Kubernetes (Minikube)
+
+Manifests dans le dossier `/k8s` :
+
+| Fichier | Description |
+|---------|-------------|
+| `namespace.yaml` | Namespace `masterannonce` |
+| `postgres-secret.yaml` | Secrets PostgreSQL (base64) |
+| `app-secret.yaml` | Secrets applicatifs JWT + DB (base64) |
+| `app-configmap.yaml` | Configuration non-sensible |
+| `postgres-init-configmap.yaml` | Scripts SQL init + seed |
+| `postgres-pvc.yaml` | PersistentVolumeClaim 1Gi |
+| `postgres-deployment.yaml` | Deployment PostgreSQL (1 replica, probes) |
+| `postgres-service.yaml` | Service ClusterIP port 5432 |
+| `app-deployment.yaml` | Deployment app (2 replicas, readiness/liveness probes) |
+| `app-service.yaml` | Service NodePort port 8080 |
+| `ingress.yaml` | Ingress sur `masterannonce.local` |
+
+### Commandes de deploiement
+
+```bash
+# 1. Demarrer Minikube
+minikube start
+
+# 2. Activer Ingress
+minikube addons enable ingress
+
+# 3. Utiliser le Docker de Minikube
+# Linux/macOS:
+eval $(minikube docker-env)
+# Windows PowerShell:
+& minikube -p minikube docker-env --shell powershell | Invoke-Expression
+
+# 4. Build l'image dans Minikube
+docker build -t masterannonce:1.0 .
+
+# 5. Deployer tous les manifests
+kubectl apply -f k8s/
+
+# 6. Verifier les pods
+kubectl get pods -n masterannonce
+
+# 7. Verifier les services
+kubectl get svc -n masterannonce
+
+# 8. Verifier l'ingress
+kubectl get ingress -n masterannonce
+
+# 9. Acceder a l'API
+minikube service app -n masterannonce --url
+```
+
+### Preuves attendues
+
+- `kubectl get pods -n masterannonce` : tous les pods en READY 1/1
+- `POST /api/auth/login` + `GET /api/annonces` fonctionnels
+- `kubectl describe pod <app-pod> -n masterannonce` : probes configurees
+
+### Points d'attention
+
+- `imagePullPolicy: Never` : l'image est build localement dans Minikube
+- Secrets en base64 dans les manifests (ne pas committer de valeurs en clair en production)
+- Health probes sur `/actuator/health` (readiness: 30s delay, liveness: 40s delay)
+- 2 replicas pour l'application (scalabilite horizontale)

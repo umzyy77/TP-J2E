@@ -186,6 +186,10 @@ Solution: Testcontainers est utilise pour eviter une configuration manuelle d'un
 3. Le pipeline Docker doit etre automatique pour chaque branche.
 Solution: job Docker execute sur tous les `push` et `pull_request`, sans etape manuelle.
 
+## Collection Postman
+
+Fichier: `MasterAnnonce.postman_collection.json` (import via Postman > Import > Upload File)
+
 ## Bonus implementes
 
 - Refresh token JWT (secret/expiration dedies)
@@ -193,6 +197,135 @@ Solution: job Docker execute sur tous les `push` et `pull_request`, sans etape m
 - Rate limiting sur `POST /api/auth/login` (HTTP 429 + header `Retry-After`)
 - Couverture de tests > 80% (JaCoCo)
 - Pipeline Docker automatique en CI
+
+## SuperBonus Kubernetes (Minikube)
+
+Manifests dans le dossier `/k8s` :
+
+| Fichier | Description |
+|---------|-------------|
+| `namespace.yaml` | Namespace `masterannonce` |
+| `postgres-secret.yaml` | Secrets PostgreSQL (base64) |
+| `app-secret.yaml` | Secrets applicatifs JWT + DB (base64) |
+| `app-configmap.yaml` | Configuration non-sensible (env vars) |
+| `postgres-init-configmap.yaml` | Scripts SQL init + seed |
+| `postgres-pvc.yaml` | PersistentVolumeClaim 1Gi |
+| `postgres-deployment.yaml` | Deployment PostgreSQL (1 replica, probes) |
+| `postgres-service.yaml` | Service ClusterIP port 5432 |
+| `app-deployment.yaml` | Deployment app (2 replicas, readiness/liveness probes) |
+| `app-service.yaml` | Service NodePort port 8080 |
+| `ingress.yaml` | Ingress sur `masterannonce.local` |
+
+### Commandes de deploiement
+
+```bash
+# 1. Demarrer Minikube
+minikube start
+
+# 2. Activer Ingress
+minikube addons enable ingress
+
+# 3. Utiliser le Docker de Minikube
+# Linux/macOS:
+eval $(minikube docker-env)
+# Windows PowerShell:
+& minikube -p minikube docker-env --shell powershell | Invoke-Expression
+
+# 4. Build l'image dans Minikube
+docker build -t masterannonce:1.0 .
+
+# 5. Deployer tous les manifests
+kubectl apply -f k8s/
+
+# 6. Verifier les pods
+kubectl get pods -n masterannonce
+
+# 7. Verifier les services
+kubectl get svc -n masterannonce
+
+# 8. Verifier l'ingress
+kubectl get ingress -n masterannonce
+
+# 9. Acceder a l'API
+minikube service app -n masterannonce --url
+```
+
+### A) Commandes d'execution
+
+Toutes les commandes sont listees ci-dessus (etapes 1 a 8). Resultat attendu :
+
+```
+kubectl get pods -n masterannonce
+NAME                        READY   STATUS    RESTARTS   AGE
+app-xxxxxxxxxx-xxxxx        1/1     Running   0          2m
+app-xxxxxxxxxx-yyyyy        1/1     Running   0          2m
+postgres-xxxxxxxxxx-zzzzz   1/1     Running   0          2m
+```
+
+### B) Preuve que l'API fonctionne
+
+Recuperer l'URL Minikube :
+
+```bash
+minikube service app -n masterannonce --url
+# exemple de sortie : http://192.168.49.2:31234
+```
+
+Appel login :
+
+```bash
+curl -X POST http://<MINIKUBE_URL>/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "password123"}'
+```
+
+Reponse attendue :
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "expiresIn": 86400000,
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshExpiresIn": 604800000
+}
+```
+
+Appel liste annonces :
+
+```bash
+curl http://<MINIKUBE_URL>/api/annonces \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+Reponse attendue : liste paginee JSON des annonces seedees.
+
+### C) Preuve des probes
+
+```bash
+kubectl describe pod -l app=masterannonce -n masterannonce
+```
+
+Extrait attendu :
+
+```
+Containers:
+  masterannonce:
+    ...
+    Readiness:  http-get http://:8080/actuator/health delay=30s timeout=3s period=10s #success=1 #failure=3
+    Liveness:   http-get http://:8080/actuator/health delay=40s timeout=3s period=15s #success=1 #failure=3
+    ...
+Conditions:
+  Ready:  True
+```
+
+Les pods en READY 1/1 confirment que les probes passent correctement.
+
+### Points d'attention
+
+- `imagePullPolicy: Never` : l'image est build localement dans Minikube
+- Secrets encodes en base64 dans les manifests (ne pas committer de valeurs en clair en production)
+- Health probes sur `/actuator/health` (readiness: 30s delay, liveness: 40s delay)
+- 2 replicas pour l'application (scalabilite horizontale)
 
 ## Sonar
 
