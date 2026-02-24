@@ -153,17 +153,22 @@ Etapes executees:
 - Build + tests + packaging: `mvn -B clean verify` (aucun skip)
 - Publication artifact JAR nomme `master-annonce-jar`
 - Publication artifact JaCoCo (`jacoco-report`)
-- Build Docker conditionnel: uniquement sur `push` vers `main` ou sur tag + publication artifact image (`master-annonce-docker-image`)
+- Build Docker conditionnel: uniquement sur `push` vers `main` ou sur tag
+  - Image taguee `master-annonce:<commit-sha>`
+  - Publication artifact `master-annonce-docker-image` (image exportee en `.tar`)
 
 Strategie DB en CI (choix demande):
 
 - Option retenue: **Testcontainers**
 - Raisons: pas de service PostgreSQL declare dans le workflow, tests d'integration auto-portables, pipeline plus reproductible.
 
-Artifact principal attendu:
+Artifacts produits:
 
-- Nom: `master-annonce-jar`
-- Contenu: JAR Spring Boot genere dans `target/`
+| Artifact | Contenu |
+|----------|---------|
+| `master-annonce-jar` | JAR Spring Boot (`target/*-SNAPSHOT.jar`) |
+| `jacoco-report` | Rapport de couverture JaCoCo |
+| `master-annonce-docker-image` | Image Docker exportee (`.tar`), tag `master-annonce:<commit-sha>` |
 
 Preuve du workflow vert:
 
@@ -174,6 +179,18 @@ Commande cible pour CI:
 ```bash
 mvn -B clean verify
 ```
+
+Checklist de validation:
+
+- [x] Workflow declenche sur `push` + `pull_request`
+- [x] Java installe + cache Maven
+- [x] `mvn clean verify` execute (aucun skip)
+- [x] Tests executes (unitaires + integration)
+- [x] Artifact `.jar` publie (`master-annonce-jar`)
+- [x] Base de donnees fonctionnelle (Testcontainers)
+- [x] Pipeline reproductible et stable
+- [x] Build Docker conditionnel (bonus)
+- [x] Rapport JaCoCo publie (bonus)
 
 Problemes rencontres (court retour):
 
