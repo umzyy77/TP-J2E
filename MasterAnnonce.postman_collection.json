@@ -1,0 +1,510 @@
+{
+	"info": {
+		"name": "MasterAnnonce API",
+		"description": "Collection Postman pour l'API REST MasterAnnonce - TP4 Spring Boot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "accessToken",
+			"value": ""
+		},
+		{
+			"key": "refreshToken",
+			"value": ""
+		},
+		{
+			"key": "annonceId",
+			"value": "1"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', json.token);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    pm.test('Login successful', function() {",
+									"        pm.expect(json.token).to.be.a('string');",
+									"        pm.expect(json.expiresIn).to.be.above(0);",
+									"        pm.expect(json.refreshToken).to.be.a('string');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"alice\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Authentification avec username/password. Retourne un access token JWT et un refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login - Invalid credentials",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Tentative de login avec des identifiants invalides. Attend un 401."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', json.token);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    pm.test('Refresh successful', function() {",
+									"        pm.expect(json.token).to.be.a('string');",
+									"        pm.expect(json.refreshToken).to.be.a('string');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "refresh"]
+						},
+						"description": "Renouvellement du token JWT via le refresh token."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints d'authentification (publics, sans token)"
+		},
+		{
+			"name": "Annonces",
+			"item": [
+				{
+					"name": "List Annonces",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces?page=0&size=10&sort=date,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Numero de page (0-indexed)"
+								},
+								{
+									"key": "size",
+									"value": "10",
+									"description": "Taille de la page"
+								},
+								{
+									"key": "sort",
+									"value": "date,desc",
+									"description": "Tri (champ,direction)"
+								},
+								{
+									"key": "q",
+									"value": "",
+									"description": "Recherche mot-cle (title/description)",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "DRAFT",
+									"description": "Filtre par statut (DRAFT, PUBLISHED, ARCHIVED)",
+									"disabled": true
+								},
+								{
+									"key": "categoryId",
+									"value": "1",
+									"description": "Filtre par categorie",
+									"disabled": true
+								},
+								{
+									"key": "authorId",
+									"value": "",
+									"description": "Filtre par auteur (UUID)",
+									"disabled": true
+								},
+								{
+									"key": "fromDate",
+									"value": "",
+									"description": "Date debut (ISO 8601)",
+									"disabled": true
+								},
+								{
+									"key": "toDate",
+									"value": "",
+									"description": "Date fin (ISO 8601)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Liste paginee des annonces avec filtres optionnels et tri."
+					},
+					"response": []
+				},
+				{
+					"name": "List Annonces - Search by keyword",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces?q=appartement&page=0&size=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces"],
+							"query": [
+								{
+									"key": "q",
+									"value": "appartement"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Recherche d'annonces par mot-cle."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Annonce by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces/{{annonceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces", "{{annonceId}}"]
+						},
+						"description": "Detail d'une annonce par son ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Annonce",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('annonceId', json.id);",
+									"    pm.test('Annonce created', function() {",
+									"        pm.expect(json.id).to.be.above(0);",
+									"        pm.expect(json.title).to.eql('Appartement T3');",
+									"        pm.expect(json.status).to.eql('DRAFT');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Appartement T3\",\n  \"description\": \"Bel appartement lumineux en centre-ville\",\n  \"adress\": \"10 rue de Paris, 75001 Paris\",\n  \"mail\": \"contact@example.com\",\n  \"categoryId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces"]
+						},
+						"description": "Creation d'une nouvelle annonce. Le statut initial est DRAFT. L'auteur est l'utilisateur authentifie."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Annonce",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Appartement T3 renove\",\n  \"description\": \"Bel appartement lumineux renove en centre-ville\",\n  \"adress\": \"10 rue de Paris, 75001 Paris\",\n  \"mail\": \"contact@example.com\",\n  \"categoryId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces/{{annonceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces", "{{annonceId}}"]
+						},
+						"description": "Mise a jour d'une annonce. Seul l'auteur peut modifier. L'annonce doit etre en statut DRAFT."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Annonce (PATCH)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"publish\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces/{{annonceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces", "{{annonceId}}"]
+						},
+						"description": "Publier une annonce (DRAFT -> PUBLISHED). Seul l'auteur peut publier."
+					},
+					"response": []
+				},
+				{
+					"name": "Archive Annonce (PATCH)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"archive\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces/{{annonceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces", "{{annonceId}}"]
+						},
+						"description": "Archiver une annonce (PUBLISHED -> ARCHIVED). Necessite le role ADMIN."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Annonce",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces/{{annonceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces", "{{annonceId}}"]
+						},
+						"description": "Suppression d'une annonce. Seul l'auteur peut supprimer. L'annonce doit etre en statut ARCHIVED."
+					},
+					"response": []
+				}
+			],
+			"description": "CRUD + changement de statut des annonces (authentification requise)"
+		},
+		{
+			"name": "Meta",
+			"item": [
+				{
+					"name": "Get Annonces Metadata",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/meta/annonces",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "meta", "annonces"]
+						},
+						"description": "Retourne les champs triables, filtrables et recherchables pour les annonces (introspection)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de metadata / introspection (publics)"
+		},
+		{
+			"name": "Actuator",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "Health check de l'application (inclut PostgreSQL)."
+					},
+					"response": []
+				},
+				{
+					"name": "App Info",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/info",
+							"host": ["{{baseUrl}}"],
+							"path": ["actuator", "info"]
+						},
+						"description": "Informations sur l'application (nom, version, description)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints Actuator (publics)"
+		},
+		{
+			"name": "Security Tests",
+			"item": [
+				{
+					"name": "Access without token (401)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces"]
+						},
+						"description": "Acces a un endpoint protege sans token. Attend un 401 Unauthorized."
+					},
+					"response": []
+				},
+				{
+					"name": "Access with invalid token (401)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "invalid.jwt.token",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/annonces",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "annonces"]
+						},
+						"description": "Acces avec un token JWT invalide. Attend un 401 Unauthorized."
+					},
+					"response": []
+				}
+			],
+			"description": "Tests de securite (401, 403)"
+		}
+	]
+}
