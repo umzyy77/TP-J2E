@@ -122,6 +122,29 @@ class AuthServiceTest {
     }
 
     @Test
+    void refresh_shouldThrow_whenExtractUserIdThrowsIllegalArgument() {
+        when(jwtService.validateRefreshToken("bad-uuid-token")).thenReturn(true);
+        when(jwtService.extractUserIdFromRefreshToken("bad-uuid-token"))
+                .thenThrow(new IllegalArgumentException("Invalid UUID"));
+
+        assertThatThrownBy(() -> authService.refresh("bad-uuid-token"))
+                .isInstanceOf(AuthUnauthorizedException.class);
+    }
+
+    @Test
+    void refresh_shouldThrow_whenUserHasNoRole() {
+        User user = userWithoutRole();
+        String refreshToken = "refresh-token";
+
+        when(jwtService.validateRefreshToken(refreshToken)).thenReturn(true);
+        when(jwtService.extractUserIdFromRefreshToken(refreshToken)).thenReturn(user.getId());
+        when(userService.findById(user.getId())).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.refresh(refreshToken))
+                .isInstanceOf(AuthUnauthorizedException.class);
+    }
+
+    @Test
     void refresh_shouldThrow_whenUserNotFound() {
         UUID userId = UUID.randomUUID();
 

@@ -64,6 +64,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleUnexpected_shouldReturn500() {
+        Exception ex = new RuntimeException("something broke");
+
+        ResponseEntity<ApiErrorDTO> response = handler.handleUnexpected(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody().error()).isEqualTo("INTERNAL_ERROR");
+        assertThat(response.getBody().messages()).containsExactly("Erreur interne du serveur");
+    }
+
+    @Test
     void handleValidation_shouldReturn400WithFieldErrors() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);

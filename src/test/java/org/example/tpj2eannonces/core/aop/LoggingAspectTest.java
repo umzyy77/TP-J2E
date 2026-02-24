@@ -101,4 +101,44 @@ class LoggingAspectTest {
         Object result = loggingAspect.logServiceMethods(joinPoint);
         assertThat(result).isEqualTo("ok");
     }
+
+    @Test
+    void logServiceMethods_shouldSanitizeProxyArg() throws Throwable {
+        when(joinPoint.getTarget()).thenReturn(this);
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getName()).thenReturn("testMethod");
+        when(joinPoint.getArgs()).thenReturn(new Object[]{new SomeProxy$$Enhanced()});
+        when(joinPoint.proceed()).thenReturn("ok");
+
+        Object result = loggingAspect.logServiceMethods(joinPoint);
+        assertThat(result).isEqualTo("ok");
+    }
+
+    @Test
+    void logServiceMethods_shouldSanitizeArgWithProxyInClassName() throws Throwable {
+        when(joinPoint.getTarget()).thenReturn(this);
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getName()).thenReturn("testMethod");
+        when(joinPoint.getArgs()).thenReturn(new Object[]{new FakeProxy()});
+        when(joinPoint.proceed()).thenReturn("ok");
+
+        Object result = loggingAspect.logServiceMethods(joinPoint);
+        assertThat(result).isEqualTo("ok");
+    }
+
+    // Inner class whose simple name contains "$$" to trigger the $$ branch
+    private static class SomeProxy$$Enhanced {
+        @Override
+        public String toString() {
+            return "some-proxy-object";
+        }
+    }
+
+    // Inner class whose simple name contains "Proxy" (without $$) to trigger the Proxy branch
+    private static class FakeProxy {
+        @Override
+        public String toString() {
+            return "fake-proxy-object";
+        }
+    }
 }

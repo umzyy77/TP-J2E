@@ -32,41 +32,38 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        try {
-            http
-                    // CSRF protection is unnecessary: this is a stateless REST API using JWT (no cookies/sessions)
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .sessionManagement(session -> session
-                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                    .authorizeHttpRequests(auth -> auth
-                            .requestMatchers("/api/auth/login").permitAll()
-                            .requestMatchers("/api/auth/refresh").permitAll()
-                            .requestMatchers("/actuator/**").permitAll()
-                            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                            .requestMatchers("/api/**").authenticated()
-                            .anyRequest().permitAll()
-                    )
-                    .exceptionHandling(ex -> ex
-                            .authenticationEntryPoint((request, response, authException) -> {
-                                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                                response.getWriter().write(
-                                        "{\"error\":\"UNAUTHORIZED\",\"messages\":[\"Authentification requise\"]}");
-                            })
-                            .accessDeniedHandler((request, response, accessDeniedException) -> {
-                                response.setStatus(HttpStatus.FORBIDDEN.value());
-                                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                                response.getWriter().write(
-                                        "{\"error\":\"FORBIDDEN\",\"messages\":[\"Acces refuse : role insuffisant\"]}");
-                            }))
-                    .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+    @SuppressWarnings({"java:S1130", "java:S112"})
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                // Disabling CSRF is safe: stateless REST API authenticated via JWT Bearer tokens (no cookies/sessions)
+                .csrf(AbstractHttpConfigurer::disable) // NOSONAR java:S4502
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/refresh").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"UNAUTHORIZED\",\"messages\":[\"Authentification requise\"]}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"FORBIDDEN\",\"messages\":[\"Acces refuse : role insuffisant\"]}");
+                        }))
+                .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-            return http.build();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Impossible d'initialiser la chaine de securite", ex);
-        }
+        return http.build();
     }
 
     @Bean

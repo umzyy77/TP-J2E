@@ -124,6 +124,24 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void shouldNotSetAuthentication_whenTokenSubjectIsNull() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        request.addHeader("Authorization", "Bearer valid-token");
+
+        when(jwtService.validateToken("valid-token")).thenReturn(true);
+        Claims claims = mock(Claims.class);
+        when(jwtService.parseToken("valid-token")).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(null);
+
+        filter.doFilterInternal(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
     void shouldNotSetAuthentication_whenTokenSubjectIsNotUuid() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();

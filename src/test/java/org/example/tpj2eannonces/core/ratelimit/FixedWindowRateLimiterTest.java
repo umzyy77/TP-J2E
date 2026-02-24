@@ -62,6 +62,36 @@ class FixedWindowRateLimiterTest {
         assertThat(otherClient.allowed()).isTrue();
     }
 
+    @Test
+    void shouldUseUnknownClient_whenKeyIsNull() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-02-24T00:00:00Z"));
+        FixedWindowRateLimiter limiter = new FixedWindowRateLimiter(1, 60, clock);
+
+        RateLimitDecision first = limiter.tryAcquire(null);
+        assertThat(first.allowed()).isTrue();
+
+        RateLimitDecision second = limiter.tryAcquire("");
+        assertThat(second.allowed()).isFalse();
+    }
+
+    @Test
+    void shouldPruneExpiredEntries_whenMaxClientsExceeded() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-02-24T00:00:00Z"));
+        FixedWindowRateLimiter limiter = new FixedWindowRateLimiter(1, 1, clock);
+
+        // Fill beyond MAX_TRACKED_CLIENTS (10_000)
+        for (int i = 0; i <= 10_000; i++) {
+            limiter.tryAcquire("client-" + i);
+        }
+
+        // Advance time so all entries are expired
+        clock.plusSeconds(2);
+
+        // This should trigger pruning
+        RateLimitDecision decision = limiter.tryAcquire("new-client");
+        assertThat(decision.allowed()).isTrue();
+    }
+
     private static final class MutableClock extends Clock {
 
         private Instant instant;
