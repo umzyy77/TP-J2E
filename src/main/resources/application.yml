@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: ${APP_NAME:MasterAnnonce}
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/MasterAnnonce}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: ${JPA_FORMAT_SQL:true}
+    open-in-view: ${JPA_OPEN_IN_VIEW:false}
+
+server:
+  port: ${APP_PORT:8080}
+
+springdoc:
+  default-flat-param-object: true
+  swagger-ui:
+    path: ${SWAGGER_UI_PATH:/swagger-ui}
+
+security:
+  password:
+    bcrypt:
+      strength: ${BCRYPT_ROUNDS:12}
+
+jwt:
+  secret: ${JWT_SECRET:MasterAnnonceSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-secret: ${JWT_REFRESH_SECRET:MasterAnnonceRefreshSecretKeyForJWTSigningMustBeAtLeast256BitsLong!!}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+rate-limit:
+  login:
+    enabled: ${RATE_LIMIT_LOGIN_ENABLED:true}
+    path: ${RATE_LIMIT_LOGIN_PATH:/api/auth/login}
+    max-requests: ${RATE_LIMIT_LOGIN_MAX_REQUESTS:20}
+    window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:60}
+
+management:
+  info:
+    env:
+      enabled: ${ACTUATOR_INFO_ENV_ENABLED:true}
+  endpoints:
+    web:
+      exposure:
+        include: ${ACTUATOR_EXPOSED_ENDPOINTS:health,info}
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_SHOW_DETAILS:always}
+      show-components: ${ACTUATOR_HEALTH_SHOW_COMPONENTS:always}
+  health:
+    db:
+      enabled: ${ACTUATOR_HEALTH_DB_ENABLED:true}
+
+info:
+  app:
+    name: ${INFO_APP_NAME:${spring.application.name}}
+    description: ${INFO_APP_DESCRIPTION:API REST MasterAnnonce}
+    version: ${INFO_APP_VERSION:1.0.0}
