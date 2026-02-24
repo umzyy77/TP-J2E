@@ -2,6 +2,7 @@ package org.example.tpj2eannonces.core.config;
 
 import org.example.tpj2eannonces.core.filter.LoginRateLimitFilter;
 import org.example.tpj2eannonces.core.security.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -69,7 +70,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public PasswordEncoder passwordEncoder(@Value("${security.password.bcrypt.strength:12}") int bcryptStrength) {
+        if (bcryptStrength < 4 || bcryptStrength > 31) {
+            throw new IllegalStateException("security.password.bcrypt.strength doit etre entre 4 et 31");
+        }
+        return new BCryptPasswordEncoder(bcryptStrength);
     }
 }

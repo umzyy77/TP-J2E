@@ -166,6 +166,16 @@ Endpoints utiles:
 
 Si le port 8080 est deja pris, definir `APP_PORT` dans `.env` (ex: `APP_PORT=8081`).
 
+Variables d'environnement principales (voir `.env.example`):
+
+- API: `APP_NAME`, `APP_PORT`, `SWAGGER_UI_PATH`
+- DB: `DB_URL`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`
+- Security: `BCRYPT_ROUNDS` (cout BCrypt backend + seed SQL)
+- JWT: `JWT_SECRET`, `JWT_EXPIRATION`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRATION`
+- Rate limit: `RATE_LIMIT_LOGIN_ENABLED`, `RATE_LIMIT_LOGIN_PATH`, `RATE_LIMIT_LOGIN_MAX_REQUESTS`, `RATE_LIMIT_LOGIN_WINDOW_SECONDS`
+- Actuator/info: `ACTUATOR_*`, `INFO_APP_*`
+- Seed SQL: `SEED_DEFAULT_PASSWORD` (defaut `password123`)
+
 Arreter et nettoyer:
 
 ```bash
