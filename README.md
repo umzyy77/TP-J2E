@@ -140,7 +140,7 @@ Workflow GitHub Actions: `.github/workflows/ci.yml`
 Declenchements:
 
 - `push` sur n'importe quelle branche
-- `pull_request` vers `main`
+- `pull_request` vers `main` uniquement
 
 Choix Java:
 
@@ -153,7 +153,7 @@ Etapes executees:
 - Build + tests + packaging: `mvn -B clean verify` (aucun skip)
 - Publication artifact JAR nomme `master-annonce-jar`
 - Publication artifact JaCoCo (`jacoco-report`)
-- Build Docker automatique sur chaque `push`/`pull_request` + publication artifact image (`master-annonce-docker-image`)
+- Build Docker conditionnel: uniquement sur `push` vers `main` ou sur tag + publication artifact image (`master-annonce-docker-image`)
 
 Strategie DB en CI (choix demande):
 
